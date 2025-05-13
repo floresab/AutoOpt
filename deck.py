@@ -5,7 +5,7 @@ import os
 class Deck:
 
     int_values = {
-        'PI', 'lwf', 'lsc', 'lopc', 'lcut',
+        'PI', 'lwf', 'lsc', 'l3bc', 'lcut',
         'lfsp0', 'e_or_v', 'lscat', 'lmu1', 'Lmu2', 'LL', 'lnodes'
     }
 
@@ -39,8 +39,16 @@ class Deck:
         self.parameter_groups.append([array_name])
 
     def set_param(self, tokens):
-        values = tokens[:len(tokens) // 2]
-        param_names = tokens[len(tokens) // 2:]
+        if '-' in tokens[-1]:                           # some dk files have range formatting (qsss1-2)
+            values = list(map(float, tokens[:-1]))
+            label = tokens[-1]
+            prefix = ''.join(filter(str.isalpha, label))
+            start, end = map(int, label[len(prefix):].split('-'))
+            param_names = [f"{prefix}{i}" for i in range(start, end + 1)]  
+        else:
+            values = tokens[:len(tokens) // 2]        # first half are values
+            param_names = tokens[len(tokens) // 2:]   # second half are parameter names
+
         self.parse_group(param_names, values)
         self.parameter_groups.append(param_names)
       
@@ -143,10 +151,9 @@ def read_deck_and_params(param_file, deck_file):
     return deck, deck_name
 
 
-deck, deck_name = read_deck_and_params('li6n.params', 'li6n_1hp.dk')
+deck, deck_name = read_deck_and_params('c12.params', 'c12.dk')
 deck.write_deck(deck_name)
-# deck = read_deck_and_params('be7.params', 'be7.dk')
-# deck, deck_name = read_deck_and_params('h3.params', 'h3_.dk')
+
     
 
 
