@@ -1,6 +1,6 @@
 import os
 
-from wavefunction_input import WavefunctionInput, VariationalWavefunctionInput, ProductWavefunctionInput
+from wavefunction_input import WavefunctionInput, VariationalWavefunctionInput, ProductWavefunctionInput, DeuteronWavefunctionInput
 
 # This class is used to group control parameters together
 class ControlGroup:
@@ -87,10 +87,10 @@ class Control:
             index += 1
 
         # Phase 2: Handle wavefunction(s)
-        def read_wavefunction_block(start_line):
+        def read_wavefunction_block(start_line, label='wf_type'):
             wf_type = lines[start_line].split()[0]
-            setattr(self, 'wf_type', wf_type)
-            self.sections.append(ControlGroup(self, ['wf_type']))
+            setattr(self, label, wf_type)
+            self.sections.append(ControlGroup(self, [label]))
 
             wf = create_wavefunction_input(wf_type)
             self.sections.append(wf)
@@ -98,10 +98,10 @@ class Control:
             return end_line
 
         if getattr(self, 'bra_eq_ket') == '.false.':  # if bra and ket are different, two wavefunction blocks
-            index = read_wavefunction_block(index)
-            index = read_wavefunction_block(index)
+            index = read_wavefunction_block(index, label='ket_wf_type')
+            index = read_wavefunction_block(index, label='bra_wf_type')
         else:
-            index = read_wavefunction_block(index)
+            index = read_wavefunction_block(index, label='wf_type')
 
         # Phase 3: Read the rest of control parameters
         while index < len(lines):
@@ -127,10 +127,13 @@ def create_wavefunction_input(wf_type: str) -> WavefunctionInput:
         return VariationalWavefunctionInput()
     elif wf_type == "'product'":
         return ProductWavefunctionInput()
+    elif wf_type == "'deuteron'":
+        return DeuteronWavefunctionInput()
     else:
         raise ValueError(f"Unknown wavefunction type: {wf_type}")
     
 
 control = Control()
-control.read_control('he4.ctrl')
+control.read_control('he4n_spec.ctrl')
+# control.read_control('d.ctrl')
 control.write_control(stream=print)
