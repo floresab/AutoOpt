@@ -86,7 +86,14 @@ class ProductWavefunctionInput(WavefunctionInput):
         self.set_attr('deck_file', lines[i].strip().split()[0]); i += 1
         end_line = self.read_standard_groups(lines, i, 3)
         return end_line
-        
+
+# subclass of WavefunctionInput for reading and writing deuteron wavefunction input files    
+class DeuteronWavefunctionInput(WavefunctionInput):
+    def __init__(self):
+        super().__init__()
+    
+    def read_wavefunction_input(self, lines, start_line): # no blocks to read for deuteron wavefunction
+        return start_line
     
             
     
