@@ -5,10 +5,10 @@ import sys
 import deck as Deck
 from deck import read_params_and_deck
 
+# Function to zero out all float parameters in a deck and its spatial symmetry objects
+# If correlation_group is provided, only those params will be set to default value if they are non-zero
 def zero_var_params(param_file, deck_file, spatial_sym_name, correlation_group, default=None):
     deck, deck_name = read_params_and_deck(param_file, deck_file)
-    assign_value = 0.0 if default is None else default
-
     correlation_group = set(correlation_group)  # for faster lookup
 
     # Zero all regular float parameters (non-spatial symmetry)
@@ -30,7 +30,10 @@ def zero_var_params(param_file, deck_file, spatial_sym_name, correlation_group, 
                     for attr_name, attr_value in vars(sym_obj).items():
                         if isinstance(attr_value, float):
                             if attr_name in correlation_group:
-                                setattr(sym_obj, attr_name, assign_value if attr_value != 0.0 else 0.0)
+                                if attr_value != 0.0:
+                                    setattr(sym_obj, attr_name, default * attr_value)
+                                else:
+                                    setattr(sym_obj, attr_name, 0.0)
                             else:
                                 setattr(sym_obj, attr_name, 0.0)
                 else:
@@ -58,4 +61,4 @@ def save_opt_file(deck, working_deck_path, base_dir="./opt"):
     return opt_path + ".opt"
 
 # zero_var_params('nuclei/params/li7.params', 'nuclei/decks/li7.dk', '4P[21]', ['spu', 'spv', 'spr', 'spa', 'spb', 'spc', 'spk', 'spl'], default=0.25)
-# zero_var_params('nuclei/params/he4n.params', 'nuclei/decks/he5_1hp_av18.dk', '1S[0]', ['spu', 'spv', 'spr', 'spa', 'spb', 'spc', 'spk', 'spl'], default=0.25)
+# zero_var_params('nuclei/params/he4n.params', 'nuclei/decks/he5_1hp_av18.dk', '1S[0]', ['spu', 'spv', 'spr', 'spa', 'spb', 'spc', 'spk', 'spl'], default=0.2)

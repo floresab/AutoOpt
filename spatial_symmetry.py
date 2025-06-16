@@ -16,7 +16,7 @@ class SpatialSymmetry:
 
 # Read the spatial symmetry correlations
 def read_spatial_symmetries(lines, start_line, nbeta, nppart, ndpart, phi_type):
-    symmetries = []
+    symmetries = {} # store SpatialSymmetry as dictionary with BLS name as key
     i = start_line  
 
     for m in range(nbeta):
@@ -25,6 +25,7 @@ def read_spatial_symmetries(lines, start_line, nbeta, nppart, ndpart, phi_type):
         # BLS name (label line)
         ss.set_param('blsname', lines[i].split()[0]); i += 1
         ss.correlation_groups.append(['blsname'])
+        blsname = ss.blsname
 
         if phi_type != 0:
             # CORE and SDSH values
@@ -35,13 +36,15 @@ def read_spatial_symmetries(lines, start_line, nbeta, nppart, ndpart, phi_type):
             sdsh_vals = map(float, lines[i].split()[:5]); i += 1
             ss.set_group(sdsh_fields, sdsh_vals)
         
-        ss.set_param('beta', lines[i].split()[0]); i += 1
+        ss.set_param('beta', float(lines[i].split()[0])); i += 1
         ss.correlation_groups.append(['beta'])
 
         # SPU line
         spu_fields = ['lfcsp', 'spu', 'spv', 'spr', 'spa', 'spb', 'spc', 'spk', 'spl']
         values = list(map(float, lines[i].split()[:9])); i += 1
-        ss.set_group(spu_fields, values)
+        for name, val in zip(spu_fields, values):
+            ss.set_param(name, int(val) if name == 'lfcsp' else val)
+        ss.correlation_groups.append(spu_fields)
 
         # PPU line (if NPPART >= 2)
         if nppart >= 2:
@@ -66,12 +69,12 @@ def read_spatial_symmetries(lines, start_line, nbeta, nppart, ndpart, phi_type):
         values = list(map(float, lines[i].split()[:6])); i += 1
         ss.set_group(ws_fields, values)
 
-        symmetries.append(ss)
+        symmetries[blsname] = ss
 
         # NDPART block
         if ndpart != 0:
 
-            msd = m + nbeta
+            # msd = m + nbeta
             ss_dep = SpatialSymmetry()
 
             # SDU line
@@ -104,7 +107,44 @@ def read_spatial_symmetries(lines, start_line, nbeta, nppart, ndpart, phi_type):
             values = list(map(float, lines[i].split()[:6])); i += 1
             ss_dep.set_group(ws_fields, values)
 
-            symmetries.insert(msd, ss_dep)
+            symmetries[f"{blsname}_dep"] = ss_dep
+
+            # # SDU
+            # sdu_fields = ['lfcsd', 'sdu', 'sdv', 'sdr', 'sda', 'sdb', 'sdc', 'sdk', 'sdl']
+            # values = list(map(float, lines[i].split()[:9])); i += 1
+            # for name, val in zip(sdu_fields, values):
+            #     ss.set_param(name, int(val) if name == 'lfcsd' else val)
+            # ss.correlation_groups.append(sdu_fields)
+
+            # # PDU
+            # pdu_fields = ['lfcpd', 'pdu', 'pdv', 'pdr', 'pda', 'pdb', 'pdc', 'pdk', 'pdl']
+            # values = list(map(float, lines[i].split()[:9])); i += 1
+            # for name, val in zip(pdu_fields, values):
+            #     ss.set_param(name, int(val) if name == 'lfcpd' else val)
+            # ss.correlation_groups.append(pdu_fields)
+
+            # # DDU (if applicable)
+            # if ndpart >= 2:
+            #     ddu_fields = ['lfcdd', 'ddu', 'ddv', 'ddr', 'dda', 'ddb', 'ddc', 'ddk', 'ddl']
+            #     values = list(map(float, lines[i].split()[:9])); i += 1
+            #     for name, val in zip(ddu_fields, values):
+            #         ss.set_param(name, int(val) if name == 'lfcdd' else val)
+            #     ss.correlation_groups.append(ddu_fields)
+
+            # # Second LFSP block
+            # values = list(map(int, lines[i].split()[:7])); i += 1
+            # ss.set_group(lfsp_fields, values)
+
+            # # Optional bscat again
+            # if ss.lscat == 1:
+            #     ss.set_param('bscat', float(lines[i].split()[0])); i += 1
+            #     ss.correlation_groups.append(['bscat'])
+
+            # # Second WS block
+            # values = list(map(float, lines[i].split()[:6])); i += 1
+            # ss.set_group(ws_fields, values)
+
+        
 
     return symmetries
 

@@ -27,15 +27,18 @@ class Parameters:
         for attr, line in zip(self.parameters, lines):
             setattr(self, attr, line.split()[0])
 
-    def write_parameters(self):
-        
-        filename = f"{self.name}.params"
-
-        with open(filename, 'w') as f:
+    def write_parameters(self, stream=None):
+        if stream is None:
+            filename = f"{self.name}.params" # write in-place
+            with open(filename, 'w') as f:
+                for attr in self.parameters:
+                    value = getattr(self, attr)
+                    f.write(f"{value:<8} {attr}\n")
+        else:
             for attr in self.parameters:
                 value = getattr(self, attr)
-                f.write(f"{value:<8} {attr}\n")
+                print(f"{value:<8} {attr}\n")
 
-param = Parameters()
-param.read_parameters('be7.params')
-param.write_parameters()
+# param = Parameters()
+# param.read_parameters('nuclei/params/he4n.params')
+# param.write_parameters(stream = print)

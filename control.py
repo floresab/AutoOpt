@@ -2,7 +2,7 @@ import os
 
 from wavefunction_input import WavefunctionInput, VariationalWavefunctionInput, ProductWavefunctionInput, DeuteronWavefunctionInput
 
-# This class is used to group control parameters together
+# Class to group control parameters together
 class ControlGroup:
     def __init__(self, owner, param_names):
         self.owner = owner
@@ -14,16 +14,20 @@ class ControlGroup:
         values = []
         labels = []
         for param in self.param_names:
-            val = getattr(self.owner, param)
+            val = self.owner.get(param, '')
+            if isinstance(val, WavefunctionInput): # if it's a wavefunction input, skip it
+                continue
             values.append(str(val))
             labels.append(param)
+        if not values:  # skip empty groups
+            return
         values_str = "  ".join(values)
         label_str = "  ".join(labels)
         spacing = max(80, len(values_str) + 2)
         line = f"{values_str:<{spacing}}{label_str}"
         stream(line.rstrip() + "\n")
 
-# This class is used to read and write the control file
+# Class to read and write the control file
 class Control:
 
     int_values = {
@@ -49,6 +53,7 @@ class Control:
 
     def __init__(self):
         self.Name = ""
+        self.parameters = {}
         self.sections = [] # stores ControlGroup or WavefunctionInput objects
 
     # helper functions
@@ -63,7 +68,7 @@ class Control:
                 parsed = val
             else:
                 parsed = float(value)
-            setattr(self, key, parsed)
+            self.parameters[key] = parsed
 
     def set_param(self, tokens):
         if len(tokens) % 2 != 0:            
@@ -71,7 +76,7 @@ class Control:
         values = tokens[:len(tokens) // 2]        # first half are values
         keys = tokens[len(tokens) // 2:]          # second half are parameter names
         self.parse_group(keys, values)
-        self.sections.append(ControlGroup(self, keys))
+        self.sections.append(ControlGroup(self.parameters, keys))
 
 
     def read_control(self, control_file):
@@ -87,21 +92,24 @@ class Control:
             index += 1
 
         # Phase 2: Handle wavefunction(s)
-        def read_wavefunction_block(start_line, label='wf_type'):
+        def read_wavefunction_block(start_line, label='wf'):
             wf_type = lines[start_line].split()[0]
-            setattr(self, label, wf_type)
-            self.sections.append(ControlGroup(self, [label]))
-
+            wf_type_key = f"{label}_type"
+            self.parameters[wf_type_key] = wf_type
+            self.sections.append(ControlGroup(self.parameters, [wf_type_key]))
             wf = create_wavefunction_input(wf_type)
-            self.sections.append(wf)
             end_line = wf.read_wavefunction_input(lines, start_line + 1)
+
+            self.parameters[label] = wf  # store wavefunction object directly
+            self.sections.append(ControlGroup(self.parameters, [label]))  # keep section info for writing
+            self.sections.append(wf)
             return end_line
 
-        if getattr(self, 'bra_eq_ket') == '.false.':  # if bra and ket are different, two wavefunction blocks
-            index = read_wavefunction_block(index, label='ket_wf_type')
-            index = read_wavefunction_block(index, label='bra_wf_type')
+        if self.parameters.get('bra_eq_ket') == '.false.':
+            index = read_wavefunction_block(index, label='ket')
+            index = read_wavefunction_block(index, label='bra')
         else:
-            index = read_wavefunction_block(index, label='wf_type')
+            index = read_wavefunction_block(index, label='wf')
 
         # Phase 3: Read the rest of control parameters
         while index < len(lines):
@@ -109,10 +117,10 @@ class Control:
             self.set_param(tokens)
             index += 1
 
-    
+    # Write the control file in-place
     def write_control(self, stream=None):
         if stream is None:
-            filename = f"{self.Name}_.ctrl"
+            filename = f"{self.Name}.ctrl" 
             with open(filename, 'w') as f:
                 for section in self.sections:
                     section.write_output(stream=f.write)
@@ -133,7 +141,7 @@ def create_wavefunction_input(wf_type: str) -> WavefunctionInput:
         raise ValueError(f"Unknown wavefunction type: {wf_type}")
     
 
-control = Control()
-control.read_control('he4n_spec.ctrl')
-# control.read_control('d.ctrl')
-control.write_control(stream=print)
+# control = Control()
+# control.read_control('be7_to_li7.ctrl')
+# control.write_control(stream=print)
+# print(control.parameters.get('bra').deck_file)
