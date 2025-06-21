@@ -13,46 +13,13 @@ class System:
         self.system_ctrl_file = system_ctrl_file
         self.three_bp = three_bp
 
-    # def copy_control_files(self):
-    #     current_dir = os.path.dirname(os.path.abspath(__file__))
-    #     os.chdir(current_dir)
-    #     print(f"Current working directory: {current_dir}")
-    #     # Move two directories up
-    #     parent_dir = os.path.dirname(os.path.dirname(os.path.dirname(current_dir)))
-    #     print(f"Parent directory: {parent_dir}")
-    #     target_ctrl_path = os.path.join(parent_dir, "ctrl", self.target_ctrl_file)
-    #     system_ctrl_path = os.path.join(parent_dir, "ctrl", self.system_ctrl_file)
-    #     print(f"Control directory: {target_ctrl_path}")
-    #     print(f"System control file: {system_ctrl_path}")
-
-    #     # copy control files to working directory
-    #     shutil.copy(target_ctrl_path, self.target_ctrl_file)
-    #     shutil.copy(system_ctrl_path, self.system_ctrl_file)
-
-    #     # create control objects
-    #     target_control = Control()
-    #     target_control.read_control(self.target_ctrl_file)
-    #     system_control = Control()
-    #     system_control.read_control(self.system_ctrl_file)
-
-    #     # turn off three-body potential if flag set
-    #     if not self.three_bp:
-    #         target_control.parameters['3b_file'] = 'pots/none.3bp'
-    #         system_control.parameters['3b_file'] = 'pots/none.3bp'
-
-    #     # change relative paths to absolute paths in the control files
-    #     target_control.update_paths(parent_dir)
-    #     target_control.write_control()
-    #     system_control.update_paths(parent_dir)
-    #     system_control.write_control()
-
     def copy_control_files(self):
-        current_dir = os.path.dirname(os.path.abspath(__file__))
+        current_dir = os.getcwd() # relative to where the script that uses System class is run
         os.chdir(current_dir)
         print(f"Current working directory: {current_dir}")
 
         # Parent directory of current script (one level up)
-        target_dir = os.path.dirname(current_dir)
+        target_dir = current_dir
         print(f"Target copy destination directory: {target_dir}")
 
         target_copy_path = os.path.join(target_dir, os.path.basename(self.target_ctrl_file))
@@ -84,8 +51,8 @@ class System:
             system_control.write_control(stream=f.write)
 
 
-system = System("He6", target_ctrl_file="/Users/lydiamazeeva/QMC/nQMCC/nQMCC/ctrl/he6.ctrl", system_ctrl_file="/Users/lydiamazeeva/QMC/nQMCC/nQMCC/ctrl/he6n.ctrl", three_bp=False)
-system.copy_control_files()
+# system = System("He6", target_ctrl_file="/Users/lydiamazeeva/QMC/nQMCC/nQMCC/ctrl/he6.ctrl", system_ctrl_file="/Users/lydiamazeeva/QMC/nQMCC/nQMCC/ctrl/he6n.ctrl", three_bp=False)
+# system.copy_control_files()
 
 
 
