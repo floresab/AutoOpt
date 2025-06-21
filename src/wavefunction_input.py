@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+import os
 
 # This module defines the WavefunctionInput class and its subclasses for reading and writing wavefunction input files.
 
@@ -59,6 +60,16 @@ class WavefunctionInput(ABC):
     def read_wavefunction_input(self, input_lines, start_line):
         pass
 
+    def resolve_paths(self, base_dir):
+        for attr in dir(self):
+            val = getattr(self, attr, None)
+            if isinstance(val, str):
+                stripped = val.strip("'\"")
+                if not os.path.isabs(stripped):
+                    full_path = os.path.join(base_dir, stripped)
+                    setattr(self, attr, f"'{full_path}'")
+
+
 # subclass of WavefunctionInput for reading and writing variational wavefunction input files
 class VariationalWavefunctionInput(WavefunctionInput):
 
@@ -94,6 +105,9 @@ class DeuteronWavefunctionInput(WavefunctionInput):
     
     def read_wavefunction_input(self, lines, start_line): # no blocks to read for deuteron wavefunction
         return start_line
+    
+
+
     
             
     
