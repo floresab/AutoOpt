@@ -128,6 +128,23 @@ class Control:
             for section in self.sections:
                 section.write_output(stream=stream)
 
+    # Update paths in the control file
+    def update_paths(self, base_dir):
+        # Update global string paths
+        for key in self.strings:
+            if key == 'basis':
+                continue
+            val = self.parameters.get(key)
+            if isinstance(val, str):
+                stripped = val.strip("'\"")
+                if not os.path.isabs(stripped):
+                    self.parameters[key] = f"'{os.path.join(base_dir, stripped)}'"
+        # Update wavefunction paths
+        for label in ['wf', 'bra', 'ket']:
+            wf = self.parameters.get(label)
+            if isinstance(wf, WavefunctionInput):
+                wf.resolve_paths(base_dir)
+
 
 # helper function to create wavefunction input based on type
 def create_wavefunction_input(wf_type: str) -> WavefunctionInput:
@@ -141,7 +158,11 @@ def create_wavefunction_input(wf_type: str) -> WavefunctionInput:
         raise ValueError(f"Unknown wavefunction type: {wf_type}")
     
 
+
+    
+
 # control = Control()
-# control.read_control('be7_to_li7.ctrl')
+# control.read_control('/Users/lydiamazeeva/QMC/nQMCC/nQMCC/external/nQMCC_Scripts/be7_to_li7.ctrl')
 # control.write_control(stream=print)
-# print(control.parameters.get('bra').deck_file)
+# control.update_paths('test')
+# control.write_control(stream=print)
