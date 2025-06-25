@@ -134,6 +134,8 @@ class Control:
         for key in self.strings:
             if key == 'basis':
                 continue
+            if key == 'optimized_deck': 
+                self.update_path_current(key) # optimized decks should be stored in the current working directory
             val = self.parameters.get(key)
             if isinstance(val, str):
                 stripped = val.strip("'\"")
@@ -144,6 +146,11 @@ class Control:
             wf = self.parameters.get(label)
             if isinstance(wf, WavefunctionInput):
                 wf.resolve_paths(base_dir)
+
+    def update_path_current(self, key):
+        raw_val = self.parameters[key].strip('"').strip("'")
+        full_path = os.path.join(os.getcwd(), raw_val)
+        self.parameters[key] = f"'{full_path}'"
 
 
 # helper function to create wavefunction input based on type
