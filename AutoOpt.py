@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+import argparse
 import subprocess
 import re
 import numpy as np
@@ -5,93 +7,130 @@ import os
 import sys
 import shutil
 from pathlib import Path 
-import copy
 
-sys.path.append("/Users/lydiamazeeva/QMC/nQMCC/nQMCC/external/nQMCC_Scripts/src")
-from control import Control
+src_path = os.path.join(os.path.dirname(__file__), "src")
+sys.path.append(src_path)
+from control import Control 
+from system import System
 from deck import Deck, read_params_and_deck
 from zero_params import zero_var_params, save_opt_file
 
-ENERGY_BIN = "/Users/lydiamazeeva/QMC/nQMCC/nQMCC/build/bin/energy"
-OPTIMIZE_BIN = "/Users/lydiamazeeva/QMC/nQMCC/nQMCC/build/bin/optimize"
+# -----------------------
+# UTILITY FUNCTIONS:
+# -----------------------
 
-system = "He4n"
-channel = "1/2+"
-potential = "AV18"
-target_ctrl = "/Users/lydiamazeeva/QMC/nQMCC/nQMCC/external/nQMCC_Scripts/he4.ctrl"
-scattering_ctrl = "/Users/lydiamazeeva/QMC/nQMCC/nQMCC/external/nQMCC_Scripts/he4n.ctrl"
-E_start = 3.0 # MeV, used for intial bscat guess    
+def change_working_directory():
+    """Change the working directory to the script's directory."""
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    os.chdir(script_dir)
+    print(f"Changed working directory to: {script_dir}")
 
+def setup_environment():
+    """Create necessary directories (`min`, `opt`) in the current working directory."""
+    change_working_directory()
+    cwd = Path.cwd()
+    (cwd / "min").mkdir(exist_ok=True) # directory to store optimized decks
+    (cwd / "opt").mkdir(exist_ok=True) # directory to store opt files
 
-def main():
-    os.chdir("/Users/lydiamazeeva/QMC/nQMCC/nQMCC/external/nQMCC_Scripts")  # Change to script directory
-    # STEP 1: Optimize target (He4) ground state 
-    target_control = Control()
-    target_control.read_control(target_ctrl)
+def load_system(name: str, target_ctrl_file: str, scattering_ctrl_file: str, three_bp: bool, E_start: float):
+    """
+    Create and return a System object.
+
+    Args:
+        name: Name of the system.
+        target_ctrl_file: Absolute path to the target control file.
+        scattering_ctrl_file: Absolute path to the system control file.
+        three_bp: Flag to enable/disable three-body potential.
+        E_start: Initial energy value for scattering optimization.
+
+    Returns:
+        Initialized System object.
+    """
+    return System(name, target_ctrl_file, scattering_ctrl_file, three_bp, E_start)
+
+def get_build_bins():
+    """ Locate and validate paths to the energy and optimize binaries."""
+    setup_environment()
+    base_dir = os.path.dirname(os.path.dirname(os.getcwd())) # build bin located two directories up
+    energy_bin = os.path.join(base_dir, "build/bin/energy")
+    optimize_bin = os.path.join(base_dir, "build/bin/optimize")
+    print(f"Using energy binary: {energy_bin}")
+    
+    if not os.path.exists(energy_bin) or not os.path.exists(optimize_bin):
+        raise FileNotFoundError("Energy or optimize binary not found in build directory.")
+    
+    return energy_bin, optimize_bin
+
+ENERGY_BIN, OPTIMIZE_BIN = get_build_bins()
+
+# -----------------------
+# MAIN AUTO_OPT LOGIC:
+# -----------------------
+
+def main(system: System):
+
+    target_control = system.target_control
+    target_ctrl = system.target_ctrl_file
+    scattering_control = system.scattering_control
+    
     target_param_file = target_control.parameters['wf'].param_file.strip("'\"")
 
-    he4_energy, he4_energy_var = optimize_deck(target_ctrl)                     # saves opt deck to min/
-    # he4_energy = -23.742
+    print(f"Target control file: {scattering_control.parameters['optimized_deck']}")
+
+    # STEP 1: Optimize target deck (he4) to get optimized parameters
+    target_energy, target_energy_var = optimize_deck(target_ctrl)                   # saves opt deck to min/
     opt_target_deck, _ = read_params_and_deck(target_param_file, target_control.parameters['optimized_deck'].strip("'\""))
-    # opt_target_deck, _ = read_params_and_deck('nuclei/params/he4.params', 'min/opt_he4_av18_uix.dk')
-    
 
-    # copy optimized params of target (he4) to working deck (he5)
-    control = Control()
-    control.read_control(scattering_ctrl)
-
-    wf = control.parameters.get('wf', None)
-    working_deck_path = wf.deck_file.strip("'\"") if wf else None                    # save path for generating opt file
+    # make temp file for working deck (he5)
+    wf = scattering_control.parameters.get('wf', None)
     if wf is None:
         raise RuntimeError("No wavefunction block found in control file.")
-    print(wf.deck_file.strip("'\""))
-    shutil.copy(wf.deck_file.strip("'\""), "/Users/lydiamazeeva/QMC/nQMCC/nQMCC/external/nQMCC_Scripts/temp.dk")
-
-    setattr(wf, 'deck_file', "'/Users/lydiamazeeva/QMC/nQMCC/nQMCC/external/nQMCC_Scripts/temp.dk'")                                           # update deck file in control
-    control.write_control()
+    shutil.copy(wf.deck_file.strip("'\""), "temp.dk")                               # use temp.dk to update params instead of original deck
+    setattr(wf, 'deck_file', "'temp.dk'")                                           # update deck file in control
+    scattering_control.write_control()
     working_deck = wf.deck_file.strip("'\"")
+    print(f"Working deck file: {working_deck}")
     param_file = wf.param_file.strip("'\"")
 
-    system_deck, system_deck_name = read_params_and_deck(param_file, working_deck)
-    # system_deck, system_deck_name = read_params_and_deck('nuclei/params/he4n.params', 'nuclei/decks/He/5/he5_1hp_av18.dk')
+    scattering_deck, scattering_deck_name = read_params_and_deck(param_file, working_deck)
 
-    # copy optimized params from target deck to system deck (lines 4-19)
+    # copy optimized params from target deck to scattering deck (lines 4-19)
     params_to_skip = ['Name', 'PI', 'J', 'MJ', 'T', 'MT', 'lwf', 'lsc', 'l3bc', 'lcut']
-    for target_param, system_param in zip(opt_target_deck.parameters.keys(), system_deck.parameters.keys()):
-        if target_param not in params_to_skip and target_param == system_param or target_param in ['cutR', 'cutA', 'cutW']: # 'diff names for [] in opt_deck
-            system_deck.parameters[system_param] = opt_target_deck.parameters[target_param]
-    system_deck.write_deck(system_deck_name) 
+    for target_param, scattering_param in zip(opt_target_deck.parameters.keys(), scattering_deck.parameters.keys()):
+        if target_param not in params_to_skip and target_param == scattering_param or target_param in ['cutR', 'cutA', 'cutW', 'delta', 'eps', 'theta', 'ups',]: # 'diff names for [] in opt_deck
+            scattering_deck.parameters[scattering_param] = opt_target_deck.parameters[target_param]
+    scattering_deck.write_deck(scattering_deck_name) 
 
 
     # STEP 2: Find starting bscat value (bscat yielding E_rel ~ 3 MeV)
-    intial_bscat_search_grid = generate_symmetric_grid(-0.15, 0.15, num_points=4, power=2.0)
-    initial_bscat, closest_E_rel = find_starting_bscat(param_file, working_deck, intial_bscat_search_grid, he4_energy) 
+    intial_bscat_search_grid = generate_symmetric_grid(-0.15, 0.15, num_points=40, power=2.0)
+    initial_bscat, closest_E_rel = find_starting_bscat(param_file, working_deck, intial_bscat_search_grid, target_energy, system) 
 
+    scattering_deck.parameters['1S[0]'].wse = closest_E_rel - 0.5                         # Set wse based on closest E_rel
+    scattering_deck.write_deck(scattering_deck_name)                                      # Save updated deck with wse
 
-    system_deck.parameters['1S[0]'].wse = closest_E_rel - 0.5  # Set wse based on closest E_rel
-    system_deck.write_deck(system_deck_name)  # Save updated deck with wse
-
-    # STEP 4: Generate optimized decks for range of bscat values
-    down, up = clustered_grid(start=initial_bscat, min_val=-2, max_val=2, n=4)
+    # STEP 3: Generate optimized decks for range of bscat values
+    down, up = clustered_grid(start=initial_bscat, min_val=-2, max_val=2, n=40) 
     print("Downward grid:", down)
     print("Upward grid with start:", up)
-    up_results = iterate_bscat(control, up, "min", he4_energy)
-    control.parameters['wf'].deck_file = f"'{working_deck}'"  # Reset deck file in control
-    control.write_control()
-    down_results = iterate_bscat(control, down[::-1], "min", he4_energy)  # Reverse for downward iteration
+    up_results = iterate_bscat(scattering_control, up, "min", target_energy)
+    scattering_control.parameters['wf'].deck_file = f"'{working_deck}'"                   # Reset deck file in control
+    scattering_control.write_control()
+    down_results = iterate_bscat(scattering_control, down[::-1], "min", target_energy)    # Reverse grid for downward iteration
 
-
-
+    # STEP 4: Save results to CSV file
     with open(f"optimized_inputs_{initial_bscat:.4f}.csv", "w") as f:
+        cwd = Path.cwd()
         f.write("system, channel, potential, bscat, wse, E_relative, var, path_to_deck\n")
         for res in up_results + down_results:
             bscat, wse, E_rel, var, path = res
-            f.write(f"{system}, {channel}, {potential}, {bscat:.4f}, {wse:.4f}, {E_rel:.4f}, {var:.4f}, {path}\n")
+            f.write(f"{system.name}, {system.channels[0]}, {system.potentials[0]}, {bscat:.4f}, {wse:.4f}, {E_rel:.4f}, {var:.4f}, {os.path.join(cwd, path)}\n")
+
+    clean_dir(system)  # Clean up working directory after processing
 
 
-# Returns the optimized energy and variance from the output of the optimization command.
-# Saves opt deck to path specified in control file.
 def optimize_deck(control_file):
+    """Run optimization using the provided control file."""
     cmd = ["mpirun", "-np", "8", OPTIMIZE_BIN]
     output_text = run_command(cmd, control_file)
     energy, variance = extract_opt_energy(output_text)
@@ -109,7 +148,6 @@ def run_command(cmd, input_file):
     return result.stdout
 
 def run_energy(ctrl_file):
-    """Run energy calculation for He4+n."""
     cmd = ["mpirun", "-np", "8", ENERGY_BIN]
     output_text = run_command(cmd, ctrl_file)
     return output_text
@@ -124,16 +162,15 @@ def extract_opt_energy(output_text):
         print("Could not find optimized energy and variance.")
         return None, None
 
-
 def extract_final_energy(output):
     matches = re.findall(r'H\s*=\s*([-+]?\d+\.\d+)', output)
     return float(matches[-1]) if matches else None
 
-def calculate_energy_com(energy_system, ctrl_energy):
-    return energy_system - ctrl_energy
+def calculate_energy_com(energy_system, target_energy):
+    return energy_system - target_energy
 
-
-def find_starting_bscat(param_file, working_deck, bscat_range, he4_energy):
+def find_starting_bscat(param_file, working_deck, bscat_range, target_energy, system):
+    """Identify a starting bscat value that yields an E_rel closest to E_start."""
     start_bscat = None
     closest_E_rel = None
     min_diff = float('inf')
@@ -147,10 +184,10 @@ def find_starting_bscat(param_file, working_deck, bscat_range, he4_energy):
         deck.write_deck(deck_name)
 
         # Run energy calculation
-        E_system = extract_final_energy(run_energy(scattering_ctrl))
-        E_rel = calculate_energy_com(E_system, he4_energy)
+        E_system = extract_final_energy(run_energy(system.scattering_ctrl_file))
+        E_rel = calculate_energy_com(E_system, target_energy)
 
-        diff = abs(E_rel - E_start)
+        diff = abs(E_rel - system.E_start)
         print(f"bscat: {bscat:.4f}, E_rel: {E_rel:.6f}, diff: {diff:.6f}")
 
         if diff < min_diff:
@@ -162,11 +199,23 @@ def find_starting_bscat(param_file, working_deck, bscat_range, he4_energy):
     return start_bscat, closest_E_rel
 
 
-
 def iterate_bscat(control: Control, grid: np.ndarray, working_dir, he4_energy):
+    """
+    Iterate over bscat values to optimize scattering wavefunction.
+
+    Args:
+        control: Control object for the scattering system.
+        grid: Array of bscat values to scan.
+        working_dir: Directory to store output decks.
+        he4_energy: Reference energy of target.
+
+    Returns:
+        List of tuples: (bscat, final_wse, E_rel, variance, deck_path).
+    """
 
     results = []
 
+    
     param_file = control.parameters['wf'].param_file.strip("'\"")
 
     for bscat in grid:
@@ -305,7 +354,48 @@ def clustered_grid(start: float, min_val: float, max_val: float, n: int = 10) ->
     upward_with_start = np.insert(upward, 0, start)
 
     return downward, upward_with_start
-        
 
-main()
+def clean_dir(system):
+    """Clean up working files and control files in working directory."""
+    shutil.rmtree(Path("opt"), ignore_errors=True)
+    os.remove("temp.dk")
+    os.remove(system.scattering_ctrl_file)
+    os.remove(system.target_ctrl_file)
+        
+# -----------------------
+# COMMAND LINE INTERFACE:
+# -----------------------
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(
+        description="Run AutoOpt using system parameters from the command line.",
+        epilog="""\
+            Example:
+            python AutoOpt.py --name He4n \
+                --target /path/to/he4_copy.ctrl \
+                --scattering /path/to/he4n_copy.ctrl \
+                --three_bp False \
+                --E_start 3.0
+            """
+    )
+    parser.add_argument('--name', required=True, help="Name of the system (e.g., He4n).")
+    parser.add_argument('--target', required=True, help="Absolute path to the target control file.")
+    parser.add_argument('--scattering', required=True, help="Absolute path to the scattering control file.")
+    parser.add_argument('--three_bp', type=lambda s: s.lower() in ['true', '1', 'yes'], required=True,
+                        help="Enable three-body potential? (True/False)")
+    parser.add_argument('--E_start', type=float, required=True, help="Starting energy (in MeV).")
+    args = parser.parse_args()
+
+    # Create the System object from CLI parameters
+    system_obj = load_system(
+        name=args.name,
+        target_ctrl_file=args.target,
+        scattering_ctrl_file=args.scattering,
+        three_bp=args.three_bp,
+        E_start=args.E_start
+    )
+    print(f"System '{system_obj.name}' successfully initialized.")
+    
+    # Execute the main auto-optimization routine
+    main(system_obj)
+
 
