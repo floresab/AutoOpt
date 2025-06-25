@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import argparse
+import copy
 import subprocess
 import re
 import numpy as np
@@ -7,6 +8,7 @@ import os
 import sys
 import shutil
 from pathlib import Path 
+from scipy.optimize import minimize_scalar
 
 src_path = os.path.join(os.path.dirname(__file__), "src")
 sys.path.append(src_path)
@@ -72,13 +74,13 @@ def main(system: System):
     target_control = system.target_control
     target_ctrl = system.target_ctrl_file
     scattering_control = system.scattering_control
+    scattering_ctrl = system.scattering_ctrl_file
     
     target_param_file = target_control.parameters['wf'].param_file.strip("'\"")
 
-    print(f"Target control file: {scattering_control.parameters['optimized_deck']}")
-
     # STEP 1: Optimize target deck (he4) to get optimized parameters
     target_energy, target_energy_var = optimize_deck(target_ctrl)                   # saves opt deck to min/
+    print(f"Optimized target energy: {target_energy:.4f} MeV, variance: {target_energy_var:.4f}")
     opt_target_deck, _ = read_params_and_deck(target_param_file, target_control.parameters['optimized_deck'].strip("'\""))
 
     # make temp file for working deck (he5)
@@ -103,11 +105,13 @@ def main(system: System):
 
 
     # STEP 2: Find starting bscat value (bscat yielding E_rel ~ 3 MeV)
-    intial_bscat_search_grid = generate_symmetric_grid(-0.15, 0.15, num_points=40, power=2.0)
-    initial_bscat, closest_E_rel = find_starting_bscat(param_file, working_deck, intial_bscat_search_grid, target_energy, system) 
-
-    scattering_deck.parameters['1S[0]'].wse = closest_E_rel - 0.5                         # Set wse based on closest E_rel
-    scattering_deck.write_deck(scattering_deck_name)                                      # Save updated deck with wse
+    initial_bscat = minimize_scalar(find_starting_bscat, args=(target_energy, system, scattering_deck), bounds=(-0.15, 0.15), method='bounded', options={'maxiter': 10}).x  # Find bscat that gives E_rel close to E_start
+    print(f"Initial bscat found: {initial_bscat:.4f}")
+    scattering_deck.parameters['1S[0]'].bscat = initial_bscat
+    scattering_deck.write_deck(scattering_deck_name)                                      # Update bscat in deck
+    scattering_deck.parameters['1S[0]'].wse = calculate_energy_com(extract_final_energy(run_energy(scattering_ctrl)), target_energy) - 0.5
+    scattering_deck.write_deck(scattering_deck_name)                         # Set wse based on closest E_rel
+    print(f"Setting wse to {scattering_deck.parameters['1S[0]'].wse:.4f} based on initial bscat {initial_bscat:.4f}")
 
     # STEP 3: Generate optimized decks for range of bscat values
     down, up = clustered_grid(start=initial_bscat, min_val=-2, max_val=2, n=40) 
@@ -119,7 +123,7 @@ def main(system: System):
     down_results = iterate_bscat(scattering_control, down[::-1], "min", target_energy)    # Reverse grid for downward iteration
 
     # STEP 4: Save results to CSV file
-    with open(f"optimized_inputs_{initial_bscat:.4f}.csv", "w") as f:
+    with open(f"optimized_decks_{initial_bscat:.4f}.csv", "w") as f:
         cwd = Path.cwd()
         f.write("system, channel, potential, bscat, wse, E_relative, var, path_to_deck\n")
         for res in up_results + down_results:
@@ -169,34 +173,15 @@ def extract_final_energy(output):
 def calculate_energy_com(energy_system, target_energy):
     return energy_system - target_energy
 
-def find_starting_bscat(param_file, working_deck, bscat_range, target_energy, system):
-    """Identify a starting bscat value that yields an E_rel closest to E_start."""
-    start_bscat = None
-    closest_E_rel = None
-    min_diff = float('inf')
-
-    for bscat in bscat_range:
-        # Load deck
-        deck, deck_name = read_params_and_deck(param_file, working_deck)
-
-        # Update bscat parameter
-        deck.parameters['1S[0]'].bscat = bscat
-        deck.write_deck(deck_name)
-
-        # Run energy calculation
-        E_system = extract_final_energy(run_energy(system.scattering_ctrl_file))
-        E_rel = calculate_energy_com(E_system, target_energy)
-
-        diff = abs(E_rel - system.E_start)
-        print(f"bscat: {bscat:.4f}, E_rel: {E_rel:.6f}, diff: {diff:.6f}")
-
-        if diff < min_diff:
-            min_diff = diff
-            start_bscat = bscat
-            closest_E_rel = E_rel
-
-    print(f"Best bscat: {start_bscat:.4f} yielding E_rel ≈ {closest_E_rel:.6f} MeV")
-    return start_bscat, closest_E_rel
+def find_starting_bscat(bscat, target_energy, system, scattering_deck):
+    # Run energy calculation
+    scattering_deck.parameters['1S[0]'].bscat = bscat
+    scattering_deck.write_deck("temp")
+    E_system = extract_final_energy(run_energy(system.scattering_ctrl_file))
+    E_rel = calculate_energy_com(E_system, target_energy)
+    print(bscat, E_rel)
+    return abs(E_rel - system.E_start)
+    
 
 
 def iterate_bscat(control: Control, grid: np.ndarray, working_dir, he4_energy):
@@ -215,12 +200,14 @@ def iterate_bscat(control: Control, grid: np.ndarray, working_dir, he4_energy):
 
     results = []
 
-    
+    # Backup the initial (or last known good) state of control for restoration if needed
+    last_good_control = copy.deepcopy(control)
     param_file = control.parameters['wf'].param_file.strip("'\"")
 
     for bscat in grid:
         deck_file = control.parameters['wf'].deck_file.strip("'\"")
         deck, deck_name = read_params_and_deck(param_file, deck_file)
+        print(f"Using deck file: {deck_file}")
         print(f"\n🔁 Starting bscat = {bscat:.4f}")
         
         # 1. Load and update deck
@@ -235,9 +222,10 @@ def iterate_bscat(control: Control, grid: np.ndarray, working_dir, he4_energy):
 
         E_rel = calculate_energy_com(E_system, he4_energy)
         wse_val = E_rel - 0.5
-        if E_rel < 0.5 or E_rel > 6.5:
+        if E_rel < 0.25 or E_rel > 6.5:
             print(f"Skipping bscat={bscat:.4f} due to E_rel={E_rel:.4f} out of bounds.")
-            break
+            control = copy.deepcopy(last_good_control)
+            continue
         print(f"bscat = {bscat:.4f}, E_rel = {E_rel:.4f}, setting wse = {wse_val:.4f}")
 
         # 3. Set wse in deck
@@ -272,6 +260,10 @@ def iterate_bscat(control: Control, grid: np.ndarray, working_dir, he4_energy):
             print(f"Error during optimization for bscat={bscat:.4f}: {e}")
             continue
         E_rel = calculate_energy_com(energy, he4_energy)
+        if E_rel < 0.25 or E_rel > 6.5:
+            print(f"Skipping bscat={bscat:.4f} due to E_rel={E_rel:.4f} out of bounds.")
+            control = copy.deepcopy(last_good_control)
+            continue
         print(f"He5 opt: bscat = {bscat:.4f}, E_rel = {E_rel:.4f}, var = {variance:.4f}")
 
         # 7. Generate opt input for wse only
@@ -298,27 +290,13 @@ def iterate_bscat(control: Control, grid: np.ndarray, working_dir, he4_energy):
 
         if final_E_rel < 0.5 or final_E_rel > 6.0:
             print(f"Skipping bscat={bscat:.4f} due to E_rel={final_E_rel:.4f} out of bounds.")
-            break
+            control = copy.deepcopy(last_good_control)
+            continue
+
+        # Update the backup copy to the current successful state.
+        last_good_control = copy.deepcopy(control)
 
     return results
-
-
-def generate_symmetric_grid(min_val, max_val, num_points=50, power=2.0):
-    """
-    Generates a grid from min_val to max_val (excluding 0),
-    with denser spacing near 0 using a power-law distribution.
-    
-    Returns:
-        np.ndarray: Array of grid points.
-    """
-    assert min_val < 0 and max_val > 0, "min_val must be < 0 and max_val > 0"
-    half_points = num_points // 2
-
-    x = np.linspace(0, 1, half_points + 1)[1:] 
-    positive = x ** power * max_val
-    negative = -1 * (x ** power * abs(min_val))
-
-    return np.concatenate([negative[::-1], positive])
 
 def clustered_grid(start: float, min_val: float, max_val: float, n: int = 10) -> tuple[np.ndarray, np.ndarray]:
     """
