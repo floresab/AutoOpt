@@ -105,16 +105,19 @@ def main(system: System):
 
 
     # STEP 2: Find starting bscat value (bscat yielding E_rel ~ 3 MeV)
-    initial_bscat = minimize_scalar(find_starting_bscat, args=(target_energy, system, scattering_deck), bounds=(-0.15, 0.15), method='bounded', options={'maxiter': 10}).x  # Find bscat that gives E_rel close to E_start
-    print(f"Initial bscat found: {initial_bscat:.4f}")
-    scattering_deck.parameters['1S[0]'].bscat = initial_bscat
+    b_0 = minimize_scalar(find_starting_bscat, args=(target_energy, system, scattering_deck), bounds=(-0.15, 0.15), method='bounded', options={'maxiter': 20}).x  # Find bscat that gives E_rel close to E_start
+    print(f"Initial bscat found: {b_0:.4f}")
+    scattering_deck.parameters['1S[0]'].bscat = b_0
     scattering_deck.write_deck(scattering_deck_name)                                      # Update bscat in deck
     scattering_deck.parameters['1S[0]'].wse = calculate_energy_com(extract_final_energy(run_energy(scattering_ctrl)), target_energy) - 0.5
     scattering_deck.write_deck(scattering_deck_name)                         # Set wse based on closest E_rel
-    print(f"Setting wse to {scattering_deck.parameters['1S[0]'].wse:.4f} based on initial bscat {initial_bscat:.4f}")
+    print(f"Setting wse to {scattering_deck.parameters['1S[0]'].wse:.4f} based on initial bscat {b_0:.4f}")
+
+
+
 
     # STEP 3: Generate optimized decks for range of bscat values
-    down, up = clustered_grid(start=initial_bscat, min_val=-2, max_val=2, n=40) 
+    down, up = clustered_grid(start=b_0, min_val=-2, max_val=2, n=40) 
     print("Downward grid:", down)
     print("Upward grid with start:", up)
     up_results = iterate_bscat(scattering_control, up, "min", target_energy)
@@ -123,7 +126,7 @@ def main(system: System):
     down_results = iterate_bscat(scattering_control, down[::-1], "min", target_energy)    # Reverse grid for downward iteration
 
     # STEP 4: Save results to CSV file
-    with open(f"optimized_decks_{initial_bscat:.4f}.csv", "w") as f:
+    with open(f"optimized_decks_{b_0:.4f}.csv", "w") as f:
         cwd = Path.cwd()
         f.write("system, channel, potential, bscat, wse, E_relative, var, path_to_deck\n")
         for res in up_results + down_results:
@@ -138,8 +141,6 @@ def optimize_deck(control_file):
     cmd = ["mpirun", "-np", "8", OPTIMIZE_BIN]
     output_text = run_command(cmd, control_file)
     energy, variance = extract_opt_energy(output_text)
-    if energy is None or variance is None:
-        raise RuntimeError(f"Failed to extract optimized energy from control file: {control_file}")
     return energy, variance
 
 
@@ -174,164 +175,94 @@ def calculate_energy_com(energy_system, target_energy):
     return energy_system - target_energy
 
 def find_starting_bscat(bscat, target_energy, system, scattering_deck):
-    # Run energy calculation
-    scattering_deck.parameters['1S[0]'].bscat = bscat
+    scattering_deck.parameters['1S[0]'].bscat = bscat                          # Update bscat in deck
     scattering_deck.write_deck("temp")
     E_system = extract_final_energy(run_energy(system.scattering_ctrl_file))
     E_rel = calculate_energy_com(E_system, target_energy)
     print(bscat, E_rel)
     return abs(E_rel - system.E_start)
+
+def opt_E(bscat, control_file, target_energy, scratch_dir):
     
-
-
-def iterate_bscat(control: Control, grid: np.ndarray, working_dir, he4_energy):
-    """
-    Iterate over bscat values to optimize scattering wavefunction.
-
-    Args:
-        control: Control object for the scattering system.
-        grid: Array of bscat values to scan.
-        working_dir: Directory to store output decks.
-        he4_energy: Reference energy of target.
-
-    Returns:
-        List of tuples: (bscat, final_wse, E_rel, variance, deck_path).
-    """
-
-    results = []
-
-    # Backup the initial (or last known good) state of control for restoration if needed
-    last_good_control = copy.deepcopy(control)
+    print(f"\n🔁 Bscat = {bscat:.4f}")
+    control = Control()
+    control.read_control(control_file)
     param_file = control.parameters['wf'].param_file.strip("'\"")
+    deck_file = control.parameters['wf'].deck_file.strip("'\"")
+    deck, deck_name = read_params_and_deck(param_file, deck_file)
+    print(f"Using deck file: {deck_file}")
 
-    for bscat in grid:
-        deck_file = control.parameters['wf'].deck_file.strip("'\"")
-        deck, deck_name = read_params_and_deck(param_file, deck_file)
-        print(f"Using deck file: {deck_file}")
-        print(f"\n🔁 Starting bscat = {bscat:.4f}")
-        
-        # 1. Load and update deck
-        deck.parameters['1S[0]'].bscat = bscat
-        deck.write_deck(deck_file.strip(".dk"))
-        
-        # 2. Run energy calculation to determine wse
-        E_system = extract_final_energy(run_energy(control.Name + ".ctrl"))
-        if E_system is None:
-            print(f"Could not get energy for bscat={bscat:.4f}")
-            continue
+    # 1. Load and update deck
+    deck.parameters['1S[0]'].bscat = bscat
+    print(f"Initial wse: {deck.parameters['1S[0]'].wse:.4f}")
+    deck.write_deck(deck_file.strip(".dk"))
+    
+    # 2. Run energy calculation to determine wse
+    E_scattering = extract_final_energy(run_energy(control.Name + ".ctrl"))
+    if E_scattering is None:
+        print(f"Could not get energy for bscat={bscat:.4f}")
+        return None, None, None, None
+    E_rel = calculate_energy_com(E_scattering, target_energy)
+    wse_val = E_rel - 0.5
+    print(f"bscat = {bscat:.4f}, E_rel = {E_rel:.4f}, setting wse = {wse_val:.4f}")
 
-        E_rel = calculate_energy_com(E_system, he4_energy)
-        wse_val = E_rel - 0.5
-        if E_rel < 0.25 or E_rel > 6.5:
-            print(f"Skipping bscat={bscat:.4f} due to E_rel={E_rel:.4f} out of bounds.")
-            control = copy.deepcopy(last_good_control)
-            continue
-        print(f"bscat = {bscat:.4f}, E_rel = {E_rel:.4f}, setting wse = {wse_val:.4f}")
+    # 3. Set wse in deck
+    deck.parameters['1S[0]'].wse = wse_val
+    deck.write_deck(deck_file.strip(".dk"))  # Write updated deck with new wse
 
-        # 3. Set wse in deck
-        deck.parameters['1S[0]'].wse = wse_val
-        deck.write_deck(deck_file.strip(".dk"))
+    # Generate opt file for He5 correlations
+    spu_corrs, _ = zero_var_params(
+        param_file,
+        deck_file,
+        '1S[0]',
+        [['spu', 'spv', 'spr', 'spa', 'spb', 'spc', 'spk', 'spl'], ['wsr', 'wsa']],
+        default=0.20
+    )
 
-        # Generate opt file for He5 correlations
-        zero_deck, _ = zero_var_params(
-            param_file,
-            deck_file,
-            '1S[0]',
-            [['spu', 'spv', 'spr', 'spa', 'spb', 'spc', 'spk', 'spl'], ['wsr', 'wsa']],
-            default=0.20
-        )
+    # Save opt input for He5 and update control
+    opt_path_he5 = save_opt_file(bscat, spu_corrs, "./opt", wse_flag=False)
+    print(f"Generated opt file for He5 correlations: {opt_path_he5}")
+    control.parameters['optimization_input'] = f"'{opt_path_he5}'"
+    control.write_control()
 
-        # Save opt input for He5 and update control
-        opt_path_he5 = save_opt_file(zero_deck, f"{deck_name}_{bscat*10000:.4f}", "./opt", wse_flag=False)
-        print(f"Generated opt file for He5 correlations: {opt_path_he5}")
-        control.parameters['optimization_input'] = f"'{opt_path_he5}'"
-        control.write_control()
+    # 5. Define new deck filename and update control
+    deck_basename = f"opt_he4n_av18_{bscat:.4f}.dk"
+    optimized_deck_path = Path(scratch_dir) / deck_basename
+    control.parameters['optimized_deck'] = f"'{optimized_deck_path}'"
+    control.write_control()
 
-        # 5. Define new deck filename and update control
-        deck_basename = f"opt_he4n_av18_{bscat:.4f}.dk"
-        optimized_deck_path = Path(working_dir) / deck_basename
-        control.parameters['optimized_deck'] = f"'{optimized_deck_path}'"
-        control.write_control()
+    # 6. Run optimization with He5 correlations
+    energy, variance = optimize_deck(control.Name + ".ctrl")
+    if energy is None:
+        print("Optimization failed, no energy returned.")  
+        return None, None, None, None
+    E_rel = calculate_energy_com(energy, target_energy)
+    print(f"He5 opt: bscat = {bscat:.4f}, E_rel = {E_rel:.4f}, var = {variance:.4f}")
 
-        # 6. Run optimization with He5 correlations
-        try:
-            energy, variance = optimize_deck(control.Name + ".ctrl")
-        except RuntimeError as e:
-            print(f"Error during optimization for bscat={bscat:.4f}: {e}")
-            continue
-        E_rel = calculate_energy_com(energy, he4_energy)
-        if E_rel < 0.25 or E_rel > 6.5:
-            print(f"Skipping bscat={bscat:.4f} due to E_rel={E_rel:.4f} out of bounds.")
-            control = copy.deepcopy(last_good_control)
-            continue
-        print(f"He5 opt: bscat = {bscat:.4f}, E_rel = {E_rel:.4f}, var = {variance:.4f}")
+    # 7. Generate opt input for wse only
+    wse_corr, _ = zero_var_params(param_file, deck_file, '1S[0]', [['wse']], default=0.20)
+    wse_opt_path = save_opt_file(bscat, wse_corr, "./opt", wse_flag=True)
+    print(f"Generated wse opt file: {wse_opt_path}")
 
-        # 7. Generate opt input for wse only
-        zero_deck, _ = zero_var_params(param_file, deck_file, '1S[0]', [['wse']], default=0.20)
-        wse_opt_path = save_opt_file(zero_deck, f"{deck_name}_{bscat*10000:.4f}", "./opt", wse_flag=True)
-        print(f"Generated wse opt file: {wse_opt_path}")
+    # 8. Update control file with new optimization input
+    control.parameters['wf'].deck_file = f"'{optimized_deck_path}'" # use optimized deck
+    print(f"Updated control file with optimized deck: {optimized_deck_path}")
+    control.parameters['optimization_input'] = f"'{wse_opt_path}'"
+    control.write_control()
 
-        # 8. Update control file with new optimization input
-        control.parameters['wf'].deck_file = f"'{optimized_deck_path}'" # use optimized deck
-        print(f"Updated control file with optimized deck: {optimized_deck_path}")
-        control.parameters['optimization_input'] = f"'{wse_opt_path}'"
-        control.write_control()
+    # 9. Final optimization; updates otimized deck
+    energy, variance = optimize_deck(control.Name + ".ctrl")
+    final_E_rel = calculate_energy_com(energy, target_energy)
+    final_deck, _ = read_params_and_deck(param_file, optimized_deck_path)
+    print(f"Final opt: bscat = {bscat:.4f}, final E_rel = {final_E_rel:.4f}, var = {variance:.4f}, wse = {final_deck.parameters['1S[0]'].wse:.4f}")
 
-        # 9. Final optimization; updates otimized deck
-        energy, variance = optimize_deck(control.Name + ".ctrl")
-        final_E_rel = calculate_energy_com(energy, he4_energy)
-        print(f"Final opt: bscat = {bscat:.4f}, final E_rel = {final_E_rel:.4f}, var = {variance:.4f}")
+    # 10. Save final deck 
+    folder_path = Path("results")
+    dest_path = folder_path / deck_basename
+    shutil.copy(optimized_deck_path, dest_path)
 
-        final_optimized_deck, _ = read_params_and_deck(param_file, optimized_deck_path)
-        final_wse = final_optimized_deck.parameters['1S[0]'].wse
+    return final_E_rel, variance, str(dest_path), final_deck.parameters['1S[0]'].wse
 
-        # 10. Save results
-        results.append((bscat, final_wse, final_E_rel, variance, str(optimized_deck_path)))
-
-        if final_E_rel < 0.5 or final_E_rel > 6.0:
-            print(f"Skipping bscat={bscat:.4f} due to E_rel={final_E_rel:.4f} out of bounds.")
-            control = copy.deepcopy(last_good_control)
-            continue
-
-        # Update the backup copy to the current successful state.
-        last_good_control = copy.deepcopy(control)
-
-    return results
-
-def clustered_grid(start: float, min_val: float, max_val: float, n: int = 10) -> tuple[np.ndarray, np.ndarray]:
-    """
-    Generate clustered grid points upward and downward from `start`,
-    with higher density near `start`, bounded by `min_val` and `max_val`.
-
-    Parameters:
-        start (float): Starting value to cluster around.
-        min_val (float): Minimum value allowed (exclusive).
-        max_val (float): Maximum value allowed (exclusive).
-        n (int): Number of points in each direction (not counting the `start` in upward grid).
-
-    Returns:
-        Tuple of (downward_grid, upward_grid_with_start)
-    """
-    if not (min_val < start < max_val):
-        raise ValueError("start must be between min_val and max_val")
-
-    # Logarithmic scaling for spacing
-    log_space = np.geomspace(1e-2, 1.0, n)
-
-    # DOWNWARD grid
-    down_steps = (start - min_val) * log_space
-    downward = start - down_steps[::-1]
-    downward = downward[downward > min_val]
-
-    # UPWARD grid (excluding start)
-    up_steps = (max_val - start) * log_space
-    upward = start + up_steps
-    upward = upward[upward < max_val]
-
-    # Include start at the beginning of the upward grid
-    upward_with_start = np.insert(upward, 0, start)
-
-    return downward, upward_with_start
 
 def clean_dir(system):
     """Clean up working files and control files in working directory."""
