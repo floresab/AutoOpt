@@ -129,28 +129,33 @@ class Control:
                 section.write_output(stream=stream)
 
     # Update paths in the control file
-    def update_paths(self, base_dir):
+    def update_paths(self, input_dir, working_dir):
         # Update global string paths
         for key in self.strings:
+            val = self.parameters.get(key)
+
+            if not isinstance(val, str):
+                continue
+
+            stripped = val.strip("'\"")
+
+            # Special case: optimized_deck should go to working_dir
+            if key == 'optimized_deck':
+                self.parameters[key] = f"'{os.path.join(working_dir, stripped)}'"
+                continue  # Skip rest of loop to avoid overwriting
+
+            # Skip basis (as per your logic)
             if key == 'basis':
                 continue
-            if key == 'optimized_deck': 
-                self.update_path_current(key) # optimized decks should be stored in the current working directory
-            val = self.parameters.get(key)
-            if isinstance(val, str):
-                stripped = val.strip("'\"")
-                if not os.path.isabs(stripped):
-                    self.parameters[key] = f"'{os.path.join(base_dir, stripped)}'"
-        # Update wavefunction paths
+
+            self.parameters[key] = f"'{os.path.join(input_dir, stripped)}'"
+
+        # Update wavefunction (wf, bra, ket) paths
         for label in ['wf', 'bra', 'ket']:
             wf = self.parameters.get(label)
             if isinstance(wf, WavefunctionInput):
-                wf.resolve_paths(base_dir)
+                wf.resolve_paths(input_dir)
 
-    def update_path_current(self, key):
-        raw_val = self.parameters[key].strip('"').strip("'")
-        full_path = os.path.join(os.getcwd(), raw_val)
-        self.parameters[key] = f"'{full_path}'"
 
 
 # helper function to create wavefunction input based on type
@@ -169,7 +174,7 @@ def create_wavefunction_input(wf_type: str) -> WavefunctionInput:
     
 
 # control = Control()
-# control.read_control('/Users/lydiamazeeva/QMC/nQMCC/nQMCC/external/nQMCC_Scripts/be7_to_li7.ctrl')
+# control.read_control('/Users/lydiamazeeva/QMC/nQMCC/nQMCC/external/nQMCC_Scripts/li6.ctrl')
 # control.write_control(stream=print)
-# control.update_paths('test')
+# control.update_paths('path/to/input/', 'path/to/working/')
 # control.write_control(stream=print)

@@ -1,6 +1,6 @@
 import os
 
-from deck import read_params_and_deck
+from deck import Deck, read_params_and_deck
 
 # Function to zero out all float parameters in a deck and its spatial symmetry objects
 # If correlation_group is provided, only those params will be set to default value if they are non-zero
@@ -44,10 +44,10 @@ def zero_var_params(param_file, deck_file, spatial_sym_name, correlation_groups,
     return deck, deck_name
 
 
-def save_opt_file(deck, working_deck_path, base_dir="./opt", wse_flag=False):
+def save_opt_file(bscat, deck, base_dir="./opt", wse_flag=False):
     os.makedirs(base_dir, exist_ok=True)
 
-    deck_base = os.path.splitext(os.path.basename(working_deck_path))[0]
+    deck_base = f"{bscat:.4f}"
     if wse_flag:
         deck_base += "_wse"
     opt_path = os.path.join(base_dir, deck_base)
