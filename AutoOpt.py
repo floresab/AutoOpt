@@ -13,8 +13,7 @@ from scipy.optimize import minimize_scalar
 src_path = os.path.join(os.path.dirname(__file__), "src")
 sys.path.append(src_path)
 from control import Control 
-from system import System
-from deck import Deck, read_params_and_deck
+from deck import read_params_and_deck
 from zero_params import zero_var_params, save_opt_file
 from nuc_system import NuclearSystem
 from utility import Utility
@@ -23,14 +22,15 @@ from utility import Utility
 # UTILITY FUNCTIONS:
 # -----------------------
 
-def change_working_directory(utility: Utility):
-    os.chdir(utility.working_dir)
+def change_working_directory(working_dir):
+    os.chdir(working_dir)
     print(f"Changed working directory to: {os.getcwd()}")
 
-def setup_environment(utility: Utility):
+def setup_environment(working_dir):
     """Create necessary directories (`min`, `opt`, `scratch`) in the current working directory."""
-    change_working_directory(utility)
+    change_working_directory(working_dir)
     cwd = Path.cwd()
+    (cwd / "logs").mkdir(exist_ok=True) # save output from commands
     (cwd / "min").mkdir(exist_ok=True) # directory to store optimized decks
     (cwd / "opt").mkdir(exist_ok=True) # directory to store opt files
     (cwd / "scratch").mkdir(exist_ok=True) # directory to store temp files
@@ -38,9 +38,10 @@ def setup_environment(utility: Utility):
 def load_system(util_file, nuclear_system_file):
 
     util = Utility(util_file)
+    setup_environment(util.working_dir)
+    util.copy_control_files()  # Copy control files to working directory
+    
     nuclear_system = NuclearSystem(nuclear_system_file)
-
-    setup_environment(util)
 
     target_control = util.target_control
     scattering_control = util.scattering_control
@@ -66,7 +67,7 @@ def load_system(util_file, nuclear_system_file):
 # MAIN AUTO_OPT LOGIC:
 # -----------------------
 
-def main(util: Utility, system: System):
+def main(util: Utility, system: NuclearSystem):
 
     BIN_PATH = util.binary_dir
 
@@ -132,30 +133,45 @@ def main(util: Utility, system: System):
 
     clean_dir(scattering_ctrl, target_ctrl)  # Clean up working directory after processing
 
+    print("Bscat scan completed.")
+    print("optimized_decks.json file created at", Path("optimized_decks.json").resolve())
+    print("Optimized decks saved to", Path("min").resolve())
+    print("Logs saved to", Path("logs").resolve())
 
-def optimize_deck(control_file, BIN_PATH, log_file=None):
+
+def run_command(cmd, input_file, bscat=None):
+    with open(input_file, "r") as ctrl:
+        result = subprocess.run(cmd, stdin=ctrl, capture_output=True, text=True)
+
+    if result.returncode != 0:
+        raise RuntimeError(f"Command failed: {' '.join(cmd)}\n{result.stderr}")
+
+    # write to per-bscat log file
+    if bscat is not None:
+        Path("logs").mkdir(exist_ok=True)
+        log_file = Path("logs") / f"{bscat:.4f}.txt"
+        with open(log_file, "a") as f:
+            f.write(f"\n===== Command: {' '.join(cmd)} =====\n")
+            f.write(f"Input file: {input_file}\n")
+            f.write(result.stdout)
+            f.write("\n")
+
+    return result.stdout
+
+def optimize_deck(control_file, BIN_PATH, bscat=None):
     OPTIMIZE_BIN = os.path.join(BIN_PATH, "optimize")
     cmd = ["mpirun", "-np", "8", OPTIMIZE_BIN]
-    output_text = run_command(cmd, control_file, log_file=log_file)
+    output_text = run_command(cmd, control_file, bscat=bscat)
     energy, variance = extract_opt_energy(output_text)
     return energy, variance
 
 
-def run_command(cmd, input_file, log_file=None):
-    with open(input_file, "r") as ctrl:
-        result = subprocess.run(cmd, stdin=ctrl, capture_output=True, text=True)
-    if result.returncode != 0:
-        raise RuntimeError(f"Command failed: {' '.join(cmd)}\n{result.stderr}")
-    if log_file:
-        with open(log_file, "w") as f:
-            f.write(result.stdout)
-    return result.stdout
-
-def run_energy(ctrl_file, BIN_PATH):
+def run_energy(ctrl_file, BIN_PATH, bscat=None):
     ENERGY_BIN = os.path.join(BIN_PATH, "energy")
     cmd = ["mpirun", "-np", "8", ENERGY_BIN]
-    output_text = run_command(cmd, ctrl_file)
+    output_text = run_command(cmd, ctrl_file, bscat=bscat)
     return output_text
+
 
 def extract_opt_energy(output_text):
     match = re.search(r'OPTIMIZED ENERGY:\s*([-+]?[0-9]*\.?[0-9]+)\s*\(([-+]?[0-9]*\.?[0-9]+)\)', output_text)
@@ -198,7 +214,7 @@ def opt_E(bscat, ss, control_file, target_energy, scratch_dir, BIN_PATH):
     deck.write_deck(deck_file.strip(".dk"))
     
     # 2. Run energy calculation to determine wse
-    E_scattering = extract_final_energy(run_energy(control.Name + ".ctrl", BIN_PATH))
+    E_scattering = extract_final_energy(run_energy(control.Name + ".ctrl", BIN_PATH, bscat=bscat))
     if E_scattering is None:
         print(f"Could not get energy for bscat={bscat:.4f}")
         return None, None, None, None
@@ -232,7 +248,7 @@ def opt_E(bscat, ss, control_file, target_energy, scratch_dir, BIN_PATH):
     control.write_control()
 
     # 6. Run optimization with He5 correlations
-    energy, variance = optimize_deck(control.Name + ".ctrl", BIN_PATH)
+    energy, variance = optimize_deck(control.Name + ".ctrl", BIN_PATH, bscat=bscat)
     if energy is None:
         print("Optimization failed, no energy returned.")  
         return None, None, None, None
@@ -251,7 +267,7 @@ def opt_E(bscat, ss, control_file, target_energy, scratch_dir, BIN_PATH):
     control.write_control()
 
     # 9. Final optimization; updates otimized deck
-    energy, variance = optimize_deck(control.Name + ".ctrl", BIN_PATH)
+    energy, variance = optimize_deck(control.Name + ".ctrl", BIN_PATH, bscat=bscat)
     final_E_rel = calculate_energy_com(energy, target_energy)
     final_deck, _ = read_params_and_deck(param_file, optimized_deck_path)
     print(f"Final opt: bscat = {bscat:.4f}, final E_rel = {final_E_rel:.4f}, var = {variance:.4f}, wse = {final_deck.parameters[ss].wse:.4f}")
