@@ -40,7 +40,7 @@ def estimate_initial_db_de(b_0, ss, input_db, control_file, deck, deck_file, tar
     deck.write_deck(deck_file.strip(".dk"))
 
     db_de = (b_plus - b_minus) / (E_plus - E_minus)
-    if db_de > 0:
+    if db_de > 0:                                           # Ensure db_de is negative for the scan
         db_de *= -1
     return db_de, b_plus, E_plus, b_minus, E_minus, backward_file, forward_file
 
@@ -91,7 +91,7 @@ def run_bscat_scan(control_file, b_0, ss, input_db, input_de, E_min, E_max, E_st
         if E_next is None:
             break
         db_de = update_db_de(b_next, b_prev, E_next, E_prev)
-        if db_de > 0:
+        if db_de > 0:                                          # Ensure db_de is negative
             db_de *= -1
         log_step_info(step, "Forward", b_next, db_de, E_next)
 
@@ -125,7 +125,7 @@ def run_bscat_scan(control_file, b_0, ss, input_db, input_de, E_min, E_max, E_st
         if E_next is None:
             break
         db_de = update_db_de(b_next, b_prev, E_next, E_prev)
-        if db_de > 0:
+        if db_de > 0:                                         # Ensure db_de is negative
             db_de *= -1
         log_step_info(step, "Backward", b_next, db_de, E_next)
 

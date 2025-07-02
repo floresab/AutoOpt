@@ -65,9 +65,8 @@ class WavefunctionInput(ABC):
             val = getattr(self, attr, None)
             if isinstance(val, str):
                 stripped = val.strip("'\"")
-                if not os.path.isabs(stripped):
-                    full_path = os.path.join(base_dir, stripped)
-                    setattr(self, attr, f"'{full_path}'")
+                full_path = os.path.join(base_dir, stripped)
+                setattr(self, attr, f"'{full_path}'")
 
 
 # subclass of WavefunctionInput for reading and writing variational wavefunction input files

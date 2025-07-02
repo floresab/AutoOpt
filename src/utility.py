@@ -6,7 +6,6 @@ class Utility:
     def __init__(self, filename):
         self.util_file = filename
         self.read_util(filename)
-        self.target_control, self.scattering_control = self.copy_control_files()
 
     def read_util(self, filename):
         if not filename.endswith(".util"):
@@ -19,7 +18,7 @@ class Utility:
             tokens = line.split()
             key = tokens[-1].lower()
             value = " ".join(tokens[:-1])
-            setattr(self, key, value)  # ✅ store as instance attribute
+            setattr(self, key, value)  # store as instance attribute
 
     def write_util(self, filename=None):
         if filename is None:
@@ -57,4 +56,5 @@ class Utility:
         scattering_control.update_paths(self.input_dir, self.working_dir)
         scattering_control.write_control()
 
-        return target_control, scattering_control
+        setattr(self, 'target_control', target_control)
+        setattr(self, 'scattering_control', scattering_control)

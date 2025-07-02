@@ -24,7 +24,7 @@ class NuclearSystem:
 
             if key in {"2b_potentials", "3b_potentials", "channels"}:
                 self.parameters[key] = [str(v) for v in values]
-            elif key in {"e_start", "input_de", "input_db"}:
+            elif key in {"e_start", "e_min", "e_max", "input_de", "input_db"}:
                 self.parameters[key] = float(values[0])
             elif key in {"name", "spatial_symmetry"}:
                 self.parameters[key] = values[0]
