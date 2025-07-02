@@ -37,9 +37,8 @@ class Control:
         'burn_in', 'num_moves_between',
         'npts', 'one_over_dx', 'fd_factor',
         'lastp_sample_type',
-        'reg_flag',
         'stop_after_group',
-        'nlopt_method',  'num_opt_walks',  'num_opt_evaluations'
+        'nlopt_method',  'num_opt_walks',  'num_opt_evaluations', 'walkers_per_node'
     }
 
     strings = {
