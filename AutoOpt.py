@@ -70,6 +70,7 @@ def load_system(util_file, nuclear_system_file):
 def main(util: Utility, system: NuclearSystem):
 
     BIN_PATH = util.binary_dir
+    cmd = util.run_cmd
 
     target_control = util.target_control
     target_ctrl = os.path.join(util.working_dir, target_control.Name + ".ctrl")
@@ -79,7 +80,7 @@ def main(util: Utility, system: NuclearSystem):
     target_param_file = target_control.parameters['wf'].param_file.strip("'\"")
 
     # STEP 1: Optimize target deck (he4) to get optimized parameters
-    target_energy, target_energy_var = optimize_deck(target_ctrl, BIN_PATH)                   # saves opt deck to min/
+    target_energy, target_energy_var = optimize_deck(target_ctrl, cmd, BIN_PATH)                   # saves opt deck to min/
     print(f"Optimized target energy: {target_energy:.4f} MeV, variance: {target_energy_var:.4f}")
     opt_target_deck, _ = read_params_and_deck(target_param_file, target_control.parameters['optimized_deck'].strip("'\""))
 
@@ -106,14 +107,30 @@ def main(util: Utility, system: NuclearSystem):
 
     # STEP 2: Find starting bscat value (bscat yielding E_rel ~ 3 MeV)
     ss = str(system.parameters['spatial_symmetry'])
-    print(f"Spatial symmetry: {ss}")
-    b_0 = minimize_scalar(find_starting_bscat, args=(ss, target_energy, scattering_deck, system.parameters['e_start'], scattering_ctrl, BIN_PATH), bounds=(-0.15, 0.15), method='bounded', options={'maxiter': 20}).x  # Find bscat that gives E_rel close to E_start
+    b_0 = minimize_scalar(find_starting_bscat, args=(ss, target_energy, scattering_deck, scattering_deck_name, system.parameters['e_start'], scattering_ctrl, cmd, BIN_PATH), bounds=(-0.15, 0.15), method='bounded', options={'maxiter': 5}).x  # Find bscat that gives E_rel close to E_start
     print(f"Initial bscat found: {b_0:.4f}")
     scattering_deck.parameters[ss].bscat = b_0
     scattering_deck.write_deck(scattering_deck_name)                                      # Update bscat in deck
-    scattering_deck.parameters[ss].wse = calculate_energy_com(extract_final_energy(run_energy(scattering_ctrl, BIN_PATH)), target_energy) - 0.5
+    scattering_deck.parameters[ss].wse = calculate_energy_com(extract_final_energy(run_energy(scattering_ctrl, cmd, BIN_PATH)), target_energy) - 0.5
     scattering_deck.write_deck(scattering_deck_name)                         # Set wse based on closest E_rel
-    print(f"Setting wse to {scattering_deck.parameters[ss].wse:.4f} based on initial bscat {b_0:.4f}")
+    print(f"Setting wse to {scattering_deck.parameters[ss].wse:.4f} in {scattering_deck_name}")
+
+    # optimize deck with initial bscat
+    opt_E(b_0, ss, scattering_ctrl, target_energy, "scratch", cmd, BIN_PATH)
+
+    control = Control()
+    control.read_control(scattering_ctrl)
+    opt_deck_file = control.parameters['wf'].deck_file.strip("'\"")
+    optimized_scattering_deck, _ = read_params_and_deck(param_file, opt_deck_file)
+
+    # do bscat search again
+    b_0 = minimize_scalar(find_starting_bscat, args=(ss, target_energy, optimized_scattering_deck, opt_deck_file, system.parameters['e_start'], scattering_ctrl, cmd, BIN_PATH), bounds=(-0.15, 0.15), method='bounded', options={'maxiter': 3}).x  # Find bscat that gives E_rel close to E_start
+    print(f"Bscat after 2nd search: {b_0:.4f}")
+    optimized_scattering_deck.parameters[ss].bscat = b_0
+    optimized_scattering_deck.write_deck(opt_deck_file.strip(".dk"))                                      # Update bscat in deck
+    optimized_scattering_deck.parameters[ss].wse = calculate_energy_com(extract_final_energy(run_energy(scattering_ctrl, cmd, BIN_PATH)), target_energy) - 0.5
+    optimized_scattering_deck.write_deck(opt_deck_file.strip(".dk"))                         # Set wse based on closest E_rel
+    print(f"Setting wse to {optimized_scattering_deck.parameters[ss].wse:.4f} in {opt_deck_file}")
 
     # STEP 3: Run bscat-step-algorithm with initial bscat value
     from bscat_optimizer import run_bscat_scan
@@ -128,6 +145,7 @@ def main(util: Utility, system: NuclearSystem):
         E_start = system.parameters['e_start'], 
         target_energy = target_energy, 
         slope_max = 2,
+        cmd = cmd,
         BIN_PATH = BIN_PATH
     )
 
@@ -140,6 +158,7 @@ def main(util: Utility, system: NuclearSystem):
 
 
 def run_command(cmd, input_file, bscat=None):
+    # print(f"Running command: {' '.join(cmd)} with input file: {input_file}")
     with open(input_file, "r") as ctrl:
         result = subprocess.run(cmd, stdin=ctrl, capture_output=True, text=True)
 
@@ -158,17 +177,17 @@ def run_command(cmd, input_file, bscat=None):
 
     return result.stdout
 
-def optimize_deck(control_file, BIN_PATH, bscat=None):
+def optimize_deck(control_file, cmd, BIN_PATH, bscat=None):
     OPTIMIZE_BIN = os.path.join(BIN_PATH, "optimize")
-    cmd = ["mpirun", "-np", "8", OPTIMIZE_BIN]
+    cmd = cmd + [OPTIMIZE_BIN]
     output_text = run_command(cmd, control_file, bscat=bscat)
     energy, variance = extract_opt_energy(output_text)
     return energy, variance
 
 
-def run_energy(ctrl_file, BIN_PATH, bscat=None):
+def run_energy(ctrl_file, cmd, BIN_PATH, bscat=None):
     ENERGY_BIN = os.path.join(BIN_PATH, "energy")
-    cmd = ["mpirun", "-np", "8", ENERGY_BIN]
+    cmd = cmd + [ENERGY_BIN]
     output_text = run_command(cmd, ctrl_file, bscat=bscat)
     return output_text
 
@@ -190,15 +209,15 @@ def extract_final_energy(output):
 def calculate_energy_com(energy_system, target_energy):
     return energy_system - target_energy
 
-def find_starting_bscat(bscat, ss, target_energy, scattering_deck, e_start, scattering_ctrl_file, BIN_PATH):
+def find_starting_bscat(bscat, ss, target_energy, scattering_deck, scattering_deck_file, e_start, scattering_ctrl_file, cmd, BIN_PATH):
     scattering_deck.parameters[ss].bscat = bscat                          # Update bscat in deck
-    scattering_deck.write_deck("temp")  # Write updated deck with new bscat
-    E_system = extract_final_energy(run_energy(scattering_ctrl_file, BIN_PATH))  # Run energy calculation
+    scattering_deck.write_deck(scattering_deck_file.strip(".dk"))  # Write updated deck with new bscat
+    E_system = extract_final_energy(run_energy(scattering_ctrl_file, cmd, BIN_PATH))  # Run energy calculation
     E_rel = calculate_energy_com(E_system, target_energy)
     print(bscat, E_rel)
     return abs(E_rel - e_start)
 
-def opt_E(bscat, ss, control_file, target_energy, scratch_dir, BIN_PATH):
+def opt_E(bscat, ss, control_file, target_energy, scratch_dir, cmd, BIN_PATH):
     
     print(f"\n🔁 Bscat = {bscat:.4f}")
     control = Control()
@@ -214,12 +233,12 @@ def opt_E(bscat, ss, control_file, target_energy, scratch_dir, BIN_PATH):
     deck.write_deck(deck_file.strip(".dk"))
     
     # 2. Run energy calculation to determine wse
-    E_scattering = extract_final_energy(run_energy(control.Name + ".ctrl", BIN_PATH, bscat=bscat))
+    E_scattering = extract_final_energy(run_energy(control.Name + ".ctrl", cmd, BIN_PATH, bscat=bscat))
     if E_scattering is None:
         print(f"Could not get energy for bscat={bscat:.4f}")
         return None, None, None, None
     E_rel = calculate_energy_com(E_scattering, target_energy)
-    wse_val = E_rel - 0.5
+    wse_val = E_rel
     print(f"bscat = {bscat:.4f}, E_rel = {E_rel:.4f}, setting wse = {wse_val:.4f}")
 
     # 3. Set wse in deck
@@ -248,7 +267,7 @@ def opt_E(bscat, ss, control_file, target_energy, scratch_dir, BIN_PATH):
     control.write_control()
 
     # 6. Run optimization with He5 correlations
-    energy, variance = optimize_deck(control.Name + ".ctrl", BIN_PATH, bscat=bscat)
+    energy, variance = optimize_deck(control.Name + ".ctrl", cmd, BIN_PATH, bscat=bscat)
     if energy is None:
         print("Optimization failed, no energy returned.")  
         return None, None, None, None
@@ -267,7 +286,7 @@ def opt_E(bscat, ss, control_file, target_energy, scratch_dir, BIN_PATH):
     control.write_control()
 
     # 9. Final optimization; updates otimized deck
-    energy, variance = optimize_deck(control.Name + ".ctrl", BIN_PATH, bscat=bscat)
+    energy, variance = optimize_deck(control.Name + ".ctrl", cmd, BIN_PATH, bscat=bscat)
     final_E_rel = calculate_energy_com(energy, target_energy)
     final_deck, _ = read_params_and_deck(param_file, optimized_deck_path)
     print(f"Final opt: bscat = {bscat:.4f}, final E_rel = {final_E_rel:.4f}, var = {variance:.4f}, wse = {final_deck.parameters[ss].wse:.4f}")
@@ -281,7 +300,6 @@ def opt_E(bscat, ss, control_file, target_energy, scratch_dir, BIN_PATH):
 
 
 def clean_dir(scattering_ctrl_file, target_ctrl_file):
-
     # shutil.rmtree(Path("opt"), ignore_errors=True)
     os.remove("temp.dk")
     os.remove(scattering_ctrl_file)
