@@ -1,4 +1,5 @@
 import os
+import shlex
 import shutil
 from control import Control
 
@@ -17,8 +18,12 @@ class Utility:
         for line in lines:
             tokens = line.split()
             key = tokens[-1].lower()
-            value = " ".join(tokens[:-1])
-            setattr(self, key, value)  # store as instance attribute
+            value = tokens[:-1]
+            if key == "run_cmd":
+                value_str = " ".join(tokens[:-1])
+                setattr(self, key, shlex.split(value_str))  # properly parsed into list
+            else:
+                setattr(self, key, " ".join(value))  # store as string
 
     def write_util(self, filename=None):
         if filename is None:
@@ -30,8 +35,12 @@ class Utility:
         with open(filename, 'w') as f:
             for key, value in self.__dict__.items():
                 if key in ['target_control', 'scattering_control', 'util_file']:
-                    continue  # skip internal objects
-                f.write(f"{str(value):<40} {key}\n")
+                    continue
+                if isinstance(value, list):
+                    value_str = " ".join(value)
+                else:
+                    value_str = str(value)
+                f.write(f"{value_str:<40} {key}\n")
 
     def copy_control_files(self):
         print(f"Target copy destination directory: {self.working_dir}")
