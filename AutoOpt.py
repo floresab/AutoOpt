@@ -250,8 +250,10 @@ def opt_E(bscat, ss, control_file, target_energy, scratch_dir, cmd, BIN_PATH):
         param_file,
         deck_file,
         ss,
-        [['spu', 'spv', 'spr', 'spa', 'spb', 'spc', 'spk', 'spl'], ['wsr', 'wsa']],
-        default=0.20
+        correlation_groups=[
+            {'params': ['spu', 'spv', 'spr', 'spa', 'spb', 'spc', 'spk', 'spl'], 'mode': 'scale', 'value': 0.2},
+            {'params': ['wsr', 'wsa'], 'mode': 'scale', 'value': 0.2}
+        ]
     )
 
     # Save opt input for He5 and update control
@@ -275,7 +277,14 @@ def opt_E(bscat, ss, control_file, target_energy, scratch_dir, cmd, BIN_PATH):
     print(f"He5 opt: bscat = {bscat:.4f}, E_rel = {E_rel:.4f}, var = {variance:.4f}")
 
     # 7. Generate opt input for wse only
-    wse_corr, _ = zero_var_params(param_file, deck_file, ss, [['wse']], default=0.20)
+    wse_corr, _ = zero_var_params(
+        param_file,
+        deck_file,
+        ss,
+        correlation_groups=[
+            {'params': ['wse'], 'mode': 'set', 'value': 0.5}
+        ]
+    )
     wse_opt_path = save_opt_file(bscat, wse_corr, "./opt", wse_flag=True)
     print(f"Generated wse opt file: {wse_opt_path}")
 
