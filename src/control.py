@@ -33,6 +33,7 @@ class Control:
     int_values = {
         'read_write_walk', 
         'ke', 'lemp',
+        'rng_seed',
         'num_blocks', 'block_size',
         'burn_in', 'num_moves_between',
         'npts', 'one_over_dx', 'fd_factor',
