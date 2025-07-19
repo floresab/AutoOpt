@@ -107,7 +107,7 @@ def main(util: Utility, system: NuclearSystem):
 
     # STEP 2: Find starting bscat value (bscat yielding E_rel ~ 3 MeV)
     ss = str(system.parameters['spatial_symmetry'])
-    b_0 = minimize_scalar(find_starting_bscat, args=(ss, target_energy, scattering_deck, scattering_deck_name, system.parameters['e_start'], scattering_ctrl, cmd, BIN_PATH), bounds=(-0.15, 0.15), method='bounded', options={'maxiter': 5}).x  # Find bscat that gives E_rel close to E_start
+    b_0 = minimize_scalar(find_starting_bscat, args=(ss, target_energy, scattering_deck, scattering_deck_name, system.parameters['e_start'], scattering_ctrl, cmd, BIN_PATH), bounds=(-0.15, 0.15), method='bounded', options={'maxiter': 10}).x  # Find bscat that gives E_rel close to E_start
     print(f"Initial bscat found: {b_0:.4f}")
     scattering_deck.parameters[ss].bscat = b_0
     scattering_deck.write_deck(scattering_deck_name)                                      # Update bscat in deck
@@ -124,7 +124,7 @@ def main(util: Utility, system: NuclearSystem):
     optimized_scattering_deck, _ = read_params_and_deck(param_file, opt_deck_file)
 
     # do bscat search again
-    b_0 = minimize_scalar(find_starting_bscat, args=(ss, target_energy, optimized_scattering_deck, opt_deck_file, system.parameters['e_start'], scattering_ctrl, cmd, BIN_PATH), bounds=(-0.15, 0.15), method='bounded', options={'maxiter': 3}).x  # Find bscat that gives E_rel close to E_start
+    b_0 = minimize_scalar(find_starting_bscat, args=(ss, target_energy, optimized_scattering_deck, opt_deck_file, system.parameters['e_start'], scattering_ctrl, cmd, BIN_PATH), bounds=(-0.15, 0.15), method='bounded', options={'maxiter': 10}).x  # Find bscat that gives E_rel close to E_start
     print(f"Bscat after 2nd search: {b_0:.4f}")
     optimized_scattering_deck.parameters[ss].bscat = b_0
     optimized_scattering_deck.write_deck(opt_deck_file.strip(".dk"))                                      # Update bscat in deck
