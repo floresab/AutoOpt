@@ -3,7 +3,6 @@ import shutil
 import sys
 import os
 import copy
-# import matplotlib.pyplot as plt
 import json
 
 src_path = os.path.join(os.path.dirname(__file__), "src")
@@ -150,23 +149,10 @@ def run_bscat_scan(control_file, b_0, ss, input_db, input_de, E_min, E_max, E_st
     results_sorted = sorted(results, key=lambda r: r["E_rel"])
     with open("optimized_decks.json", "w") as f:
         json.dump(results_sorted, f, indent=2)
-
-    # --- Plotting Results ---
-    # plt.figure(figsize=(10, 6))
-    # plt.plot([r['E_rel'] for r in results_sorted], [r['bscat'] for r in results_sorted], marker='o')
-    # plt.xlabel("E_rel (MeV)")
-    # plt.ylabel("bscat")
-    # plt.title("bscat vs E_rel (Forward + Backward Walks)")
-    # plt.grid(True)
-    # plt.show()
-
-    # --- Clean up working dir ---
+        
     clean_up_dir()
 
     return results_sorted
 
 def clean_up_dir():
     shutil.rmtree(Path("scratch"), ignore_errors=True)
-
-# control_file = "/Users/lydiamazeeva/QMC/nQMCC/nQMCC/external/nQMCC_Scripts/he4n_copy.ctrl"
-# run_bscat_scan(control_file, 0.0768, '1S[0]', 0.01536, 0.25, 0.5, 5.5, 3, -23.8819, 2, '/Users/lydiamazeeva/QMC/nQMCC/nQMCC/build/bin')
