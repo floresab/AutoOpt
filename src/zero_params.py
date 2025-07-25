@@ -56,18 +56,13 @@ def zero_var_params(param_file, deck_file, spatial_sym_name, correlation_groups)
 
     return deck, deck_name
 
-
-
-def save_opt_file(bscat, deck, base_dir="./opt", wse_flag=False):
+"""
+"""
+def save_opt_file(bscat, deck, base_dir="./opt", suffix=""):
     os.makedirs(base_dir, exist_ok=True)
-
-    deck_base = f"{bscat:.4f}"
-    if wse_flag:
-        deck_base += "_wse"
+    deck_base = f"{bscat:.4f}"+suffix
     opt_path = os.path.join(base_dir, deck_base)
-
     deck.write_deck(opt_path, extension="opt")  # specify .opt file
-
     return opt_path + ".opt"
 
 

@@ -124,6 +124,7 @@ def main(util: Utility, system: NuclearSystem):
 #-----------------------------------------------------------------------
     ss = str(system.parameters['spatial_symmetry'])
     scattering_deck.parameters[ss].wse = system.parameters['e_start'] - WSE_SHIFT
+    scattering_deck.write_deck(scattering_deck_name) # Set wse based on closest E_rel
 #-----------------------------------------------------------------------
     b_0 = minimize_scalar(find_starting_bscat, \
       args=(ss, target_energy, scattering_deck, \
@@ -134,12 +135,6 @@ def main(util: Utility, system: NuclearSystem):
     print(f"Initial bscat found: {b_0:.4f}")
     scattering_deck.parameters[ss].bscat = b_0
     scattering_deck.write_deck(scattering_deck_name) # Update bscat in deck
-    #scattering_deck.parameters[ss].wse = \
-    #  calculate_energy_com(\
-    #  extract_final_energy(\
-    #  run_energy(scattering_ctrl, cmd, BIN_PATH)), target_energy)-WSE_SHIFT
-    scattering_deck.write_deck(scattering_deck_name) # Set wse based on closest E_rel
-    print(f"Setting wse to {scattering_deck.parameters[ss].wse:.4f} in {scattering_deck_name}")
 #-----------------------------------------------------------------------
 # optimize deck with initial bscat
 #-----------------------------------------------------------------------
@@ -148,11 +143,12 @@ def main(util: Utility, system: NuclearSystem):
     control = Control()
     control.read_control(scattering_ctrl)
     opt_deck_file = control.parameters['wf'].deck_file.strip("'\"")
-    optimized_scattering_deck, _ = read_params_and_deck(param_file, opt_deck_file)
+    optimized_scattering_deck, optimized_scattering_deck_name = read_params_and_deck(param_file, opt_deck_file)
 #-----------------------------------------------------------------------
 # do bscat search again
 #-----------------------------------------------------------------------
-    scattering_deck.parameters[ss].wse = system.parameters['e_start'] - WSE_SHIFT
+    optimized_scattering_deck.parameters[ss].wse = system.parameters['e_start'] - WSE_SHIFT
+    optimized_scattering_deck.write_deck(optimized_scattering_deck_name) # Set wse based on closest E_rel
 #-----------------------------------------------------------------------
     b_0 = minimize_scalar(find_starting_bscat, \
       args=(ss, target_energy, optimized_scattering_deck,\
@@ -274,6 +270,8 @@ def opt_E(bscat, ss, control_file, target_energy, scratch_dir, cmd, BIN_PATH):
 #-----------------------------------------------------------------------
     WSE_SHIFT=0.5
     WSE_OPT_VALUE=0.5
+    WSE_NUM_OPTS=5
+    WSE_NUM_EVALS=5
     OPT_SCALE=0.2
 #-----------------------------------------------------------------------
     print(f"\n🔁 Bscat = {bscat:.4f}")
@@ -282,65 +280,26 @@ def opt_E(bscat, ss, control_file, target_energy, scratch_dir, cmd, BIN_PATH):
     param_file = control.parameters['wf'].param_file.strip("'\"")
     deck_file = control.parameters['wf'].deck_file.strip("'\"")
     deck, deck_name = read_params_and_deck(param_file, deck_file)
+    num_evals=control.parameters['num_opt_evaluations']
+    num_walks=control.parameters['num_opt_walks']
     print(f"Using deck file: {deck_file}")
 #-----------------------------------------------------------------------
 # 1. Load and update deck
 #-----------------------------------------------------------------------
     deck.parameters[ss].bscat = bscat
+    deck.write_deck(deck_file.strip(".dk"))  # Write updated deck with new bscat
     print(f"Initial wse: {deck.parameters[ss].wse:.4f}")
-    deck.write_deck(deck_file.strip(".dk"))
-#-----------------------------------------------------------------------
-# 2. Run energy calculation to determine wse
-#-----------------------------------------------------------------------
     E_scattering = extract_final_energy(run_energy(control.Name + ".ctrl", cmd, BIN_PATH, bscat=bscat))
-    if E_scattering is None:
-        print(f"Could not get energy for bscat={bscat:.4f}")
-        return None, None, None, None
-    E_rel = calculate_energy_com(E_scattering, target_energy)
-    wse_val = E_rel-WSE_SHIFT
-    print(f"bscat = {bscat:.4f}, E_rel = {E_rel:.4f}, setting wse = {wse_val:.4f}")
+    E_rel_start = calculate_energy_com(E_scattering, target_energy)
+    wse_val = E_rel_start-WSE_SHIFT
+    print(f"E_rel = {E_rel_start:.4f}, setting wse = {wse_val:.4f}")
 #-----------------------------------------------------------------------
-# 3. Set wse in deck
+# 2. Set wse in deck
 #-----------------------------------------------------------------------
     deck.parameters[ss].wse = wse_val
     deck.write_deck(deck_file.strip(".dk"))  # Write updated deck with new wse
 #-----------------------------------------------------------------------
-# Generate opt file for He5 correlations
-#-----------------------------------------------------------------------
-    spu_corrs, _ = zero_var_params(
-        param_file,
-        deck_file,
-        ss,
-        correlation_groups=[
-            {'params': ['spu', 'spv', 'spr', 'spa', 'spb', 'spc', 'spk', 'spl'], 'mode': 'scale', 'value': OPT_SCALE},
-            {'params': ['wsr', 'wsa'], 'mode': 'scale', 'value': OPT_SCALE}
-        ]
-    )
-#-----------------------------------------------------------------------
-# Save opt input for He5 and update control
-#-----------------------------------------------------------------------
-    opt_path_he5 = save_opt_file(bscat, spu_corrs, "./opt", wse_flag=False)
-    print(f"Generated opt file for He5 correlations: {opt_path_he5}")
-    control.parameters['optimization_input'] = f"'{opt_path_he5}'"
-    control.write_control()
-#-----------------------------------------------------------------------
-# 5. Define new deck filename and update control
-#-----------------------------------------------------------------------
-    deck_basename = f"opt_he4n_av18_{bscat:.4f}.dk"
-    optimized_deck_path = Path(scratch_dir) / deck_basename
-    control.parameters['optimized_deck'] = f"'{optimized_deck_path}'"
-    control.write_control()
-#-----------------------------------------------------------------------
-# 6. Run optimization with He5 correlations
-#-----------------------------------------------------------------------
-    energy, variance = optimize_deck(control.Name + ".ctrl", cmd, BIN_PATH, bscat=bscat)
-    if energy is None:
-        print("Optimization failed, no energy returned.")
-        return None, None, None, None
-    E_rel = calculate_energy_com(energy, target_energy)
-    print(f"OPT FIRST: bscat = {bscat:.4f}, E_rel = {E_rel:.4f}, var = {variance:.4f}")
-#-----------------------------------------------------------------------
-# 7. Generate opt input for wse only
+# 3. Generate opt input for wse only
 #-----------------------------------------------------------------------
     wse_corr, _ = zero_var_params(
         param_file,
@@ -351,38 +310,97 @@ def opt_E(bscat, ss, control_file, target_energy, scratch_dir, cmd, BIN_PATH):
         ]
     )
 #-----------------------------------------------------------------------
-    wse_opt_path = save_opt_file(bscat, wse_corr, "./opt", wse_flag=True)
+    wse_opt_path = save_opt_file(bscat, wse_corr, "./opt", suffix="_wse")
     print(f"Generated wse opt file: {wse_opt_path}")
 #-----------------------------------------------------------------------
-# 8. Update control file with new optimization input
+# 4. Update control file with new optimization input
 #-----------------------------------------------------------------------
-    control.parameters['wf'].deck_file = f"'{optimized_deck_path}'" # use optimized deck
-    print(f"Updated control file with optimized deck: {optimized_deck_path}")
+    deck_basename = f"opt_he4n_av18_{bscat:.4f}.dk"
+    optimized_deck_path = Path(scratch_dir) / deck_basename
+    control.parameters['optimized_deck'] = f"'{optimized_deck_path}'"
     control.parameters['optimization_input'] = f"'{wse_opt_path}'"
+    control.parameters['num_opt_walks']=WSE_NUM_OPTS
+    control.parameters['num_opt_evaluations']=WSE_NUM_EVALS
     control.write_control()
 #-----------------------------------------------------------------------
-# 10. Final optimization; updates otimized deck
+# 5. Estimate WSE
 #-----------------------------------------------------------------------
     energy, variance = optimize_deck(control.Name + ".ctrl", cmd, BIN_PATH, bscat=bscat)
-    E_rel = calculate_energy_com(energy, target_energy)
-    print(f"OPT SECOND: bscat = {bscat:.4f}, E_rel = {E_rel:.4f}, var = {variance:.4f}")
+    E_rel_WSE = calculate_energy_com(energy, target_energy)
+    WSE_EDIFF = E_rel_WSE-E_rel_start
+    print(f"OPT WSE: E_rel = {E_rel_WSE:.4f}, var = {variance:.4f}, wse = {deck.parameters[ss].wse:.4f}")
+    print(f"ENERGY DIFFERENCE: {WSE_EDIFF:.4f} MeV")
 #-----------------------------------------------------------------------
-# 7. Update WSE to erel-wse_shift then optimize again
+# 6. Generate opt file for scattered nucleon correlations
 #-----------------------------------------------------------------------
-    #deck, deck_name = read_params_and_deck(param_file, optimized_deck_path)
-    #deck.write_deck(str(f"'{optimized_deck_path}'").strip("'\"").strip(".dk"))  # Write updated deck with new wse
-    #control.parameters['wf'].deck_file = f"'{optimized_deck_path}'" # use optimized deck
-    #control.write_control()
-    #print(f"Updated control file with optimized deck: {optimized_deck_path}")
+    spu_corrs, _ = zero_var_params(
+        param_file,
+        deck_file,
+        ss,
+        correlation_groups=[
+            {'params': ['qssp1', 'qssp1'], 'mode': 'scale', 'value': OPT_SCALE},
+            {'params': ['spu', 'spv', 'spr', 'spa', 'spb', 'spc', 'spk', 'spl'], 'mode': 'scale', 'value': OPT_SCALE},
+            {'params': ['wsr', 'wsa'], 'mode': 'scale', 'value': OPT_SCALE}
+        ]
+    )
+    opt_path_he5 = save_opt_file(bscat, spu_corrs, "./opt")
+    print(f"Generated opt file for He5 correlations: {opt_path_he5}")
+#-----------------------------------------------------------------------
+# 7. Save opt input for He5 and update control
+#-----------------------------------------------------------------------
+    control.parameters['wf'].deck_file = f"'{optimized_deck_path}'" # use optimized deck
     control.parameters['optimization_input'] = f"'{opt_path_he5}'"
+    control.parameters['num_opt_walks']=num_walks
+    control.parameters['num_opt_evaluations']=num_evals
     control.write_control()
+    print(f"Updated control file with optimized deck: {optimized_deck_path}")
+#-----------------------------------------------------------------------
+# 8. Run optimization with He5 correlations
+#-----------------------------------------------------------------------
     energy, variance = optimize_deck(control.Name + ".ctrl", cmd, BIN_PATH, bscat=bscat)
     if energy is None:
         print("Optimization failed, no energy returned.")
         return None, None, None, None
+    E_rel_CORR = calculate_energy_com(energy, target_energy)
+    CORR_EDIFF_T = E_rel_CORR-E_rel_start
+    CORR_EDIFF = E_rel_CORR-E_rel_WSE
+    print(f"OPT CORR: E_rel = {E_rel_CORR:.4f}, var = {variance:.4f}")
+    print(f"ENERGY DIFFERENCE: TOTAL: {CORR_EDIFF_T:.4f}, FROM WSE: {CORR_EDIFF:.4f} MeV")
+#-----------------------------------------------------------------------
+# 9. Update WSE to erel-wse_shift then optimize again
+#-----------------------------------------------------------------------
+    all_corrs, _ = zero_var_params(
+        param_file,
+        deck_file,
+        ss,
+        correlation_groups=[
+            {'params': ['wse'], 'mode': 'set', 'value': WSE_OPT_VALUE},
+            {'params': ['qssp1', 'qssp1'], 'mode': 'scale', 'value': OPT_SCALE},
+            {'params': ['spu', 'spv', 'spr', 'spa', 'spb', 'spc', 'spk', 'spl'], 'mode': 'scale', 'value': OPT_SCALE},
+            {'params': ['wsr', 'wsa'], 'mode': 'scale', 'value': OPT_SCALE}
+        ]
+    )
+    opt_path_all = save_opt_file(bscat, all_corrs, "./opt", suffix="_all")
+    print(f"Generated opt file for He5 correlations: {opt_path_all}")
+#-----------------------------------------------------------------------
+    control.parameters['optimization_input'] = f"'{opt_path_all}'"
+    control.write_control()
+    print(f"Updated control file with optimized input: {opt_path_all}")
+#-----------------------------------------------------------------------
+    energy, variance = optimize_deck(control.Name + ".ctrl", cmd, BIN_PATH, bscat=bscat)
+    if energy is None:
+        print("Optimization failed, no energy returned.")
+        return None, None, None, None
+#-----------------------------------------------------------------------
+# 10. Final optimization; updates otimized deck
+#-----------------------------------------------------------------------
     final_E_rel = calculate_energy_com(energy, target_energy)
     final_deck, _ = read_params_and_deck(param_file, optimized_deck_path)
-    print(f"Final opt: bscat = {bscat:.4f}, final E_rel = {final_E_rel:.4f}, var = {variance:.4f}, wse = {final_deck.parameters[ss].wse:.4f}")
+    FINAL_EDIFF_T = final_E_rel-E_rel_start
+    FINAL_EDIFF_C = final_E_rel-E_rel_CORR
+    FINAL_EDIFF_W = final_E_rel-E_rel_WSE
+    print(f"FINAL OPT: final E_rel = {final_E_rel:.4f}, var = {variance:.4f}, wse = {final_deck.parameters[ss].wse:.4f}")
+    print(f"ENERGY DIFFERENCE: TOTAL: {FINAL_EDIFF_T:.4f}, FROM CORR: {FINAL_EDIFF_C:.4f}, FROM WSE: {FINAL_EDIFF_W:.4f} MeV")
 #-----------------------------------------------------------------------
 # 11. Save final deck 
 #-----------------------------------------------------------------------
