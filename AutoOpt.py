@@ -338,7 +338,7 @@ def opt_E(bscat, ss, control_file, target_energy, scratch_dir, cmd, BIN_PATH):
         deck_file,
         ss,
         correlation_groups=[
-            {'params': ['qssp1', 'qssp1'], 'mode': 'scale', 'value': OPT_SCALE},
+            {'params': ['qssp1', 'qssp2'], 'mode': 'scale', 'value': OPT_SCALE},
             {'params': ['spu', 'spv', 'spr', 'spa', 'spb', 'spc', 'spk', 'spl'], 'mode': 'scale', 'value': OPT_SCALE},
             {'params': ['wsr', 'wsa'], 'mode': 'scale', 'value': OPT_SCALE}
         ]
@@ -375,7 +375,7 @@ def opt_E(bscat, ss, control_file, target_energy, scratch_dir, cmd, BIN_PATH):
         ss,
         correlation_groups=[
             {'params': ['wse'], 'mode': 'set', 'value': WSE_OPT_VALUE},
-            {'params': ['qssp1', 'qssp1'], 'mode': 'scale', 'value': OPT_SCALE},
+            {'params': ['qssp1', 'qssp2'], 'mode': 'scale', 'value': OPT_SCALE},
             {'params': ['spu', 'spv', 'spr', 'spa', 'spb', 'spc', 'spk', 'spl'], 'mode': 'scale', 'value': OPT_SCALE},
             {'params': ['wsr', 'wsa'], 'mode': 'scale', 'value': OPT_SCALE}
         ]
