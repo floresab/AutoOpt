@@ -1,50 +1,66 @@
-import os
-
+"""
+parameters.py
+Nuclei Param Files for nQMCC
+"""
+#-----------------------------------------------------------------------
 class PARAMETERS:
+#-----------------------------------------------------------------------
     def __init__(self,file_name_):
-        self.FILE_NAME = os.path.splitext(os.path.basename(file_name_))[0]
-        print(self.FILE_NAME)
-        self.NPART=0
-        self.NPROT=0
-        self.ISOSPIN_NT=0
-        self.NSPART=0
-        self.NPPART=0
-        self.NSDPART=0
-        self.PHI_TYPE=0
-        self.NBETA=0
-        self.NPHIM=0
-        self.NS0=0
-        self.MXL=0
-        self.MNYOUNG=0
-        self.M_SPIN_LIM=0
-        self.IMA_LIM=0
-        self.NY_LIM=0
-        self.KMACO_LIM=0
-        self.M_L_LIM=0
-        self.NTERM=0
-        self.NSTA0=0
-        self.NSC0=0
-        self.NORTAB_DIM=0
-        self.MAX_ICY1=0
-
+#-----------------------------------------------------------------------
+        self.FILE_NAME = file_name_ #os.path.splitext(os.path.basename(file_name_))[0]
+        self.Read()
+#-----------------------------------------------------------------------
     def Read(self):
-        with open(filename, 'r') as f:
-            lines = [line.strip() for line in f if line.strip()]
-
-        if len(lines) != len(self.parameters):
-            raise ValueError("Size mismatch between file lines and parameter list.")
-
-        for attr, line in zip(self.parameters, lines):
-            setattr(self, attr, line.split()[0])
-
-    def Write(self, stream=None):
-        if stream is None:
-            filename = f"{self.name}.params" # write in-place
-            with open(filename, 'w') as f:
-                for attr in self.parameters:
-                    value = getattr(self, attr)
-                    f.write(f"{value:<8} {attr}\n")
-        else:
-            for attr in self.parameters:
-                value = getattr(self, attr)
-                print(f"{value:<8} {attr}\n")
+#-----------------------------------------------------------------------
+        file = open(self.FILE_NAME, 'r')
+        param_data = [int((l.strip().split())[0]) for l in file.readlines()]
+        file.close()
+        self.NPART=param_data[0]
+        self.NPROT=param_data[1]
+        self.ISOSPIN_NT=param_data[2]
+        self.NSPART=param_data[3]
+        self.NPPART=param_data[4]
+        self.NSDPART=param_data[5]
+        self.PHI_TYPE=param_data[6]
+        self.NBETA=param_data[7]
+        self.NPHIM=param_data[8]
+        self.NS0=param_data[9]
+        self.MXL=param_data[10]
+        self.MNYOUNG=param_data[11]
+        self.M_SPIN_LIM=param_data[12]
+        self.IMA_LIM=param_data[13]
+        self.NY_LIM=param_data[14]
+        self.KMACO_LIM=param_data[15]
+        self.M_L_LIM=param_data[16]
+        self.NTERM=param_data[17]
+        self.NSTA0=param_data[18]
+        self.NSC0=param_data[19]
+        self.NORTAB_DIM=param_data[20]
+        self.MAX_ICY1=param_data[21]
+#-----------------------------------------------------------------------
+    def Write(self, out_file):
+        file = open(out_file, 'w')
+        file.write(str(self.NPART)+"\n")
+        file.write(str(self.NPROT)+"\n")
+        file.write(str(self.ISOSPIN_NT)+"\n")
+        file.write(str(self.NSPART)+"\n")
+        file.write(str(self.NPPART)+"\n")
+        file.write(str(self.NSDPART)+"\n")
+        file.write(str(self.PHI_TYPE)+"\n")
+        file.write(str(self.NBETA)+"\n")
+        file.write(str(self.NPHIM)+"\n")
+        file.write(str(self.NS0)+"\n")
+        file.write(str(self.MXL)+"\n")
+        file.write(str(self.MNYOUNG)+"\n")
+        file.write(str(self.M_SPIN_LIM)+"\n")
+        file.write(str(self.IMA_LIM)+"\n")
+        file.write(str(self.NY_LIM)+"\n")
+        file.write(str(self.KMACO_LIM)+"\n")
+        file.write(str(self.M_L_LIM)+"\n")
+        file.write(str(self.NTERM)+"\n")
+        file.write(str(self.NSTA0)+"\n")
+        file.write(str(self.NSC0)+"\n")
+        file.write(str(self.NORTAB_DIM)+"\n")
+        file.write(str(self.MAX_ICY1)+"\n")
+        file.close()
+#-----------------------------------------------------------------------
