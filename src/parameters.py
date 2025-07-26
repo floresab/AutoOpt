@@ -61,6 +61,6 @@ class PARAMETERS:
         file.write(str(self.NSTA0)+"\n")
         file.write(str(self.NSC0)+"\n")
         file.write(str(self.NORTAB_DIM)+"\n")
-        file.write(str(self.MAX_ICY1)+"\n")
+        file.write(str(self.MAX_ICY1))
         file.close()
 #-----------------------------------------------------------------------
