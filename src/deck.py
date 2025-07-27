@@ -365,3 +365,44 @@ class DECK:
                     self.SS[b].Write(params,file,"")
         file.close()
 # ----------------------------------------------------------------------
+def GenerateZeroDeck(params: PARAMETERS, dk_: DECK):
+# ----------------------------------------------------------------------
+    dk=deepcopy(dk_)
+# ----------------------------------------------------------------------
+    for key,val in dk.__dict__.items():
+        if isinstance(val,list):
+            dk.__dict__[key]=["0." for i in dk.__dict__[key]]
+        else:
+            if "." in val: dk.__dict__[key]="0."
+# ----------------------------------------------------------------------
+    if params.NBETA >=1:
+        for ss in dk.SS:
+            for key,val in ss.__dict__.items():
+                if isinstance(val,list):
+                    ss.__dict__[key]=["0." for i in dk.__dict__[key]]
+                elif isinstance(val,int):
+                    pass
+                else:
+                    if "." in val: ss.__dict__[key]="0."
+# ----------------------------------------------------------------------
+    return dk
+# ----------------------------------------------------------------------
+def GenerateOptFile(params: PARAMETERS, dk: DECK, file_name, instructions: list):
+# ----------------------------------------------------------------------
+    opt=GenerateZeroDeck(params,dk)
+    try:
+        for i in instructions:
+            if i["ss"]:
+                opt.SS[i["ss_idx"]].__dict__[i["key"]]=str(float(dk.SS[i["ss_idx"]].__dict__[i["key"]])*i["scale"]+i["flat"])
+            else:
+                if isinstance(opt.__dict__[i["key"]],list):
+                    if i["all"]:
+                        opt.__dict__[i["key"]]=[str(float(v)*i["scale"]+i["flat"]) for v in dk.__dict__[i["key"]]]
+                    else:
+                        opt.__dict__[i["key"]][i["idx"]]=str(float(dk.__dict__[i["key"]][i["idx"]])*i["scale"]+i["flat"])
+                else:
+                    opt.__dict__[i["key"]]=str(float(dk.__dict__[i["key"]])*i["scale"]+i["flat"])
+    except KeyError:
+        print(f"GenerateOptFile *** BAD KEY: {i["key"]} ***")
+    opt.Write(params,file_name)
+# ----------------------------------------------------------------------
