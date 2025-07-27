@@ -34,7 +34,7 @@ class parameters_t:
 #-----------------------------------------------------------------------
     def Read(self):
 #-----------------------------------------------------------------------
-        file = open(self.FILE_NAME, 'r')
+        file = open(self.FILE_NAME.strip("\'"), 'r')
         data = [int((l.strip().split())[0]) for l in file.readlines()]
         file.close()
         self.NPART=data[0]
@@ -61,7 +61,7 @@ class parameters_t:
         self.MAX_ICY1=data[21]
 #-----------------------------------------------------------------------
     def Write(self, out_file):
-        file = open(out_file, 'w')
+        file = open(out_file.strip("\'"), 'w')
         file.write(str(self.NPART)+"\n")
         file.write(str(self.NPROT)+"\n")
         file.write(str(self.ISOSPIN_NT)+"\n")

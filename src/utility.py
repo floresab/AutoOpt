@@ -1,69 +1,47 @@
+
+"""
+wavefunction.py
+AutoOpt paths + command line interface
+"""
+#-----------------------------------------------------------------------
+from pathlib import Path
+from subprocess import run
 import os
-import shlex
-import shutil
-from control import Control
+import re
+#-----------------------------------------------------------------------
+class utility_t:
+    FILE_NAME=""
+    NQMCC_DIR=""
+    BIN_DIR=""
+    WORKING_DIR=""
+    SYSTEM_TYPE=""
+    TARGET_CTRL_FILE=""
+    SCATTERING_CTRL_FILE=""
+    SYSTEM_FILE=""
+    RUN_CMD=[]
+#-----------------------------------------------------------------------
+    def __init__(self, file_name_):
+        self.FILE_NAME = file_name_
+        self.Read(self.FILE_NAME)
+#-----------------------------------------------------------------------
+    def Read(self, filename):
+        file = open(self.FILE_NAME.strip("\'"), 'r')
+        data = [(l.strip().split()) for l in file.readlines()]
+        file.close()
+        self.NQMCC_DIR=data[0][0]
+        self.BIN_DIR=data[1][0]
+        self.WORKING_DIR=da ta[2][0]
+        self.SYSTEM_TYPE=data[3][0]
+        self.CTRL_FILE=data[4][0]
+#-----------------------------------------------------------------------
+        if self.SYSTEM_TYPE.tolower() == "scattering":
+            self.SCATTERING_CTRL_FILE=data[5][0]
+            data=data[6:]
+        else:
+            data=data[5:]
+#-----------------------------------------------------------------------
+        self.SYSTEM_FILE=data[0][0]
+        self.RUN_CMD=data[1]
+#-----------------------------------------------------------------------
 
-class Utility:
-    def __init__(self, filename):
-        self.util_file = filename
-        self.read_util(filename)
 
-    def read_util(self, filename):
-        if not filename.endswith(".util"):
-            raise ValueError("Utility file must end with '.util'")
-
-        with open(filename, 'r') as f:
-            lines = [line.strip() for line in f if line.strip()]
-
-        for line in lines:
-            tokens = line.split()
-            key = tokens[-1].lower()
-            value = tokens[:-1]
-            if key == "run_cmd":
-                value_str = " ".join(tokens[:-1])
-                setattr(self, key, shlex.split(value_str))  # properly parsed into list
-            else:
-                setattr(self, key, " ".join(value))  # store as string
-
-    def write_util(self, filename=None):
-        if filename is None:
-            if hasattr(self, 'util_file'):
-                filename = self.util_file
-            else:
-                raise ValueError("No filename provided and no previously read file to overwrite.")
-
-        with open(filename, 'w') as f:
-            for key, value in self.__dict__.items():
-                if key in ['target_control', 'scattering_control', 'util_file']:
-                    continue
-                if isinstance(value, list):
-                    value_str = " ".join(value)
-                else:
-                    value_str = str(value)
-                f.write(f"{value_str:<40} {key}\n")
-
-    def copy_control_files(self):
-        print(f"Target copy destination directory: {self.working_dir}")
-
-        target_copy_path = os.path.join(self.working_dir, os.path.basename(self.target_file))
-        scattering_copy_path = os.path.join(self.working_dir, os.path.basename(self.scattering_file))
-
-        shutil.copy(self.target_file, target_copy_path)
-        shutil.copy(self.scattering_file, scattering_copy_path)
-
-        # Load control files from the copied locations
-        target_control = Control()
-        target_control.read_control(target_copy_path)
-
-        scattering_control = Control()
-        scattering_control.read_control(scattering_copy_path)
-
-        # Update and rewrite paths
-        target_control.update_paths(self.input_dir, self.working_dir)
-        target_control.write_control()
-
-        scattering_control.update_paths(self.input_dir, self.working_dir)
-        scattering_control.write_control()
-
-        setattr(self, 'target_control', target_control)
-        setattr(self, 'scattering_control', scattering_control)

@@ -191,6 +191,7 @@ class spatial_symmetry_t:
             file.write(" ".join([self.D_WSE,self.D_WSV,self.D_WSR,self.D_WSA,self.D_WBRHO,self.D_WBALPH])+last_char)
 #-----------------------------------------------------------------------
 class deck_t:
+#-----------------------------------------------------------------------
     FILE_NAME=""
     SS=[]
     NAME=""
@@ -258,14 +259,14 @@ class deck_t:
     QDDD1=""
     QDDD2=""
 #-----------------------------------------------------------------------
-    def __init__(self, params: parameters_t, file_name_):
+    def __init__(self, params: parameters_t, file_name_: str):
 #-----------------------------------------------------------------------
         self.FILE_NAME = file_name_
         self.Read(params)
 #-----------------------------------------------------------------------
-    def Read(self,params: parameters_t):
+    def Read(self, params: parameters_t):
 #-----------------------------------------------------------------------
-        file = open(self.FILE_NAME, 'r')
+        file = open(self.FILE_NAME.strip("\'"), 'r')
         data = [(l.strip().split()) for l in file.readlines()]
         file.close()
         self.NAME=data[0][0]
@@ -320,7 +321,7 @@ class deck_t:
 #-----------------------------------------------------------------------
     def Write(self,params: parameters_t,out_file):
 # ----------------------------------------------------------------------
-        file = open(out_file, 'w')
+        file = open(out_file.strip("\'"), 'w')
         file.write(self.NAME+"\n")
         file.write(" ".join([self.PARITY,self.TOTAL_J,self.TOTAL_JZ,self.TOTAL_T,self.TOTAL_TZ])+"\n")
         file.write(" ".join([self.LWF,self.LSC,self.LOPC,self.LCUT])+"\n")

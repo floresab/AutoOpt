@@ -133,7 +133,7 @@ class control_t:
 #-----------------------------------------------------------------------
     def Read(self):
 #-----------------------------------------------------------------------
-        file = open(self.FILE_NAME, 'r')
+        file = open(self.FILE_NAME.strip("\'"), 'r')
         data = [(l.strip().split()) for l in file.readlines()]
         file.close()
 #----------------------------------------------------------------------
@@ -149,6 +149,9 @@ class control_t:
             self.KET_TYPE=data[0][0]
             self.INPUT_KET=wavefunction_input_t(self.KET_TYPE,data[1:8])
             data=data[1+self.INPUT_KET.IDX:]
+        else:
+            self.KET_TYPE=self.BRA_TYPE
+            self.INPUT_KET=self.INPUT_BRA
 #----------------------------------------------------------------------
         self.RW_WALK,self.WALK_FILE=data[0][:2]
         self.CONST_FILE=data[1][0]
@@ -172,7 +175,7 @@ class control_t:
         self.SCRATCH_DIR=data[19][0]
 #-----------------------------------------------------------------------
     def Write(self, out_file):
-        file = open(out_file, 'w')
+        file = open(out_file.strip("\'"), 'w')
         file.write(self.BASIS+"\n")
         file.write(self.BRA_EQ_KET+"\n")
         file.write(self.BRA_TYPE+"\n")
