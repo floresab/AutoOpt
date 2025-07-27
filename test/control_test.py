@@ -3,9 +3,9 @@ import os
 #-----------------------------------------------------------------------
 sys.path.append(os.path.join(os.path.dirname(__file__), "../src"))
 #-----------------------------------------------------------------------
-from parameters import PARAMETERS
+from control import CONTROL
 #-----------------------------------------------------------------------
 if __name__=="__main__":
-  params=PARAMETERS("test.params")
-  params.Write("dummy.out")
+  ctrl=CONTROL("test.ctrl")
+  ctrl.Write("dummy.out")
 #-----------------------------------------------------------------------
