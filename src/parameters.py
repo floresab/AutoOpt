@@ -9,7 +9,7 @@ class PARAMETERS:
     ISOSPIN_NT=0
     NSPART=0
     NPPART=0
-    NSDPART=0
+    NDPART=0
     PHI_TYPE=0
     NBETA=0
     NPHIM=0
@@ -29,7 +29,7 @@ class PARAMETERS:
 #-----------------------------------------------------------------------
     def __init__(self,file_name_):
 #-----------------------------------------------------------------------
-        self.FILE_NAME = file_name_ #os.path.splitext(os.path.basename(file_name_))[0]
+        self.FILE_NAME = file_name_
         self.Read()
 #-----------------------------------------------------------------------
     def Read(self):
@@ -42,7 +42,7 @@ class PARAMETERS:
         self.ISOSPIN_NT=param_data[2]
         self.NSPART=param_data[3]
         self.NPPART=param_data[4]
-        self.NSDPART=param_data[5]
+        self.NDPART=param_data[5]
         self.PHI_TYPE=param_data[6]
         self.NBETA=param_data[7]
         self.NPHIM=param_data[8]
@@ -67,7 +67,7 @@ class PARAMETERS:
         file.write(str(self.ISOSPIN_NT)+"\n")
         file.write(str(self.NSPART)+"\n")
         file.write(str(self.NPPART)+"\n")
-        file.write(str(self.NSDPART)+"\n")
+        file.write(str(self.NDPART)+"\n")
         file.write(str(self.PHI_TYPE)+"\n")
         file.write(str(self.NBETA)+"\n")
         file.write(str(self.NPHIM)+"\n")

@@ -23,15 +23,11 @@ class WAVEFUNCTION_INPUT:
 #-----------------------------------------------------------------------
             case "variational":
 #-----------------------------------------------------------------------
-                self.PARAM_FILE =list_wf_input[0][0]
-                self.DECK_FILE  =list_wf_input[1][0]
-                self.RW_SPIN    =list_wf_input[2][0]
-                self.SPIN_FILE  =list_wf_input[2][1]
-                self.RW_YLM_PHI =list_wf_input[3][0]
-                self.YLM_FILE   =list_wf_input[3][1]
-                self.PHI_FILE   =list_wf_input[3][2]
-                self.RW_CONFIG  =list_wf_input[4][0]
-                self.CONFIG_FILE=list_wf_input[4][1]
+                self.PARAM_FILE=list_wf_input[0][0]
+                self.DECK_FILE =list_wf_input[1][0]
+                self.RW_SPIN,self.SPIN_FILE=list_wf_input[2][:2]
+                self.RW_YLM_PHI,self.YLM_FILE,self.PHI_FILE=list_wf_input[3][:3]
+                self.RW_CONFIG,self.CONFIG_FILE=list_wf_input[4][:2]
                 self.IDX=5
 #-----------------------------------------------------------------------
             case "product":
@@ -40,13 +36,9 @@ class WAVEFUNCTION_INPUT:
                 self.PRODUCT_DEC_FILE=list_wf_input[1][0]
                 self.PARAM_FILE =list_wf_input[2][0]
                 self.DECK_FILE  =list_wf_input[3][0]
-                self.RW_SPIN    =list_wf_input[4][0]
-                self.SPIN_FILE  =list_wf_input[4][1]
-                self.RW_YLM_PHI =list_wf_input[5][0]
-                self.YLM_FILE   =list_wf_input[5][1]
-                self.PHI_FILE   =list_wf_input[5][2]
-                self.RW_CONFIG  =list_wf_input[6][0]
-                self.CONFIG_FILE=list_wf_input[6][1]
+                self.RW_SPIN,self.SPIN_FILE=list_wf_input[4][:2]
+                self.RW_YLM_PHI,self.YLM_FILE,self.PHI_FILE=list_wf_input[5][:3]
+                self.RW_CONFIG,self.CONFIG_FILE=list_wf_input[6][:2]
                 self.IDX=7
 #-----------------------------------------------------------------------
             case _:
@@ -136,7 +128,7 @@ class CONTROL:
 #-----------------------------------------------------------------------
     def __init__(self,file_name_):
 #-----------------------------------------------------------------------
-        self.FILE_NAME = file_name_ #os.path.splitext(os.path.basename(file_name_))[0]
+        self.FILE_NAME = file_name_
         self.Read()
 #-----------------------------------------------------------------------
     def Read(self):
@@ -158,49 +150,23 @@ class CONTROL:
             self.INPUT_KET=WAVEFUNCTION_INPUT(self.KET_TYPE,data[1:8])
             data=data[1+self.INPUT_KET.IDX:]
 #----------------------------------------------------------------------
-        self.RW_WALK=data[0][0]
-        self.WALK_FILE=data[0][1]
+        self.RW_WALK,self.WALK_FILE=data[0][:2]
         self.CONST_FILE=data[1][0]
-        self.L2BP_FILE=data[2][0]
-        self.L3BP_FILE=data[2][1]
-        self.LKE=data[3][0]
-        self.LEMP=data[3][1]
+        self.L2BP_FILE,self.L3BP_FILE=data[2][:2]
+        self.LKE,self.LEMP=data[3][:2]
         self.RNG_SEED=data[4][0]
-        self.NUM_BLOCKS=data[5][0]
-        self.BLOCK_SIZE=data[5][1]
-        self.NUM_WALKERS_PER_NODE=data[5][2]
-        self.BURN_IN_COUNT=data[6][0]
-        self.NUM_MOVES_BETWEEN=data[6][1]
+        self.NUM_BLOCKS,self.BLOCK_SIZE,self.NUM_WALKERS_PER_NODE=data[5][:3]
+        self.BURN_IN_COUNT,self.NUM_MOVES_BETWEEN=data[6][:2]
         self.PARTICLE_MAX_DX=data[7][0]
-        self.NPTS=data[8][0]
-        self.NPTS_IN_ONE_FERMI=data[8][1]
-        self.FD_FACTOR=data[8][2]
-        self.SS_LIMIT=data[9][0]
-        self.SP_LIMIT=data[9][1]
-        self.SD_LIMIT=data[9][2]
+        self.NPTS,self.NPTS_IN_ONE_FERMI,self.FD_FACTOR=data[8][:3]
+        self.SS_LIMIT,self.SP_LIMIT,self.SD_LIMIT=data[9][:3]
         self.BOX_SIZE=data[10][0]
-        self.SAMPLE_L2=data[11][0]
-        self.RSAM=data[11][1]
-        self.PSAM=data[11][2]
-        self.BIN_WIDTH=data[12][0]
-        self.BIN_MAXR=data[12][1]
-        self.LASTP_SAMPLE_TYPE=data[13][0]
-        self.LPS_A=data[13][1]
-        self.LPS_B=data[13][2]
-        self.EXTRA_NORM=data[13][3]
-        self.EXTRA_NORM_ERROR=data[13][4]
-        self.ANC_ENERGY=data[14][0]
-        self.REG_GAMMA=data[14][1]
-        self.ECLSTR1=data[14][2]
-        self.DCLSTR1=data[14][3]
-        self.ECLSTR2=data[14][4]
-        self.DCLSTR2=data[14][5]
-        self.DO_GROUP=data[15][0]
-        self.GROUP_FILE=data[15][1]
-        self.NORTAB_FILE=data[15][2]
-        self.NLOPT_METHOD=data[16][0]
-        self.NUM_OPT_WALKS=data[16][1]
-        self.NUM_OPT_EVALUATIONS=data[16][2]
+        self.SAMPLE_L2,self.RSAM,self.PSAM=data[11][:3]
+        self.BIN_WIDTH,self.BIN_MAXR=data[12][:2]
+        self.LASTP_SAMPLE_TYPE,self.LPS_A,self.LPS_B,self.EXTRA_NORM,self.EXTRA_NORM_ERROR=data[13][:5]
+        self.ANC_ENERGY,self.REG_GAMMA,self.ECLSTR1,self.DCLSTR1,self.ECLSTR2,self.DCLSTR2=data[14][:6]
+        self.DO_GROUP,self.GROUP_FILE,self.NORTAB_FILE=data[15][:3]
+        self.NLOPT_METHOD,self.NUM_OPT_WALKS,self.NUM_OPT_EVALUATIONS=data[16][:3]
         self.OPTIMIZATION_INPUT_FILE=data[17][0]
         self.OPTIMIZED_DECK_FILE=data[18][0]
         self.SCRATCH_DIR=data[19][0]
