@@ -14,5 +14,7 @@ if __name__=="__main__":
   ,{"ss":False,"key":"SSH_WSE","scale":1, "flat":-2342.27777777777777342}\
   ,{"ss":False,"key":"ALPHA","all":True,"scale":1, "flat":-69.420}\
   ,{"ss":False,"key":"BETA","all":False,"idx":2,"scale":1, "flat":-14}]
-  GenerateOptFile(params, dk, "dummy.out",instr)
+  opt=GenerateOptFile(params, dk, "dummy.out",instr)
+  opt.UpdateFloats(params,4)
+  opt.Write(params,"dummy.out")
 #-----------------------------------------------------------------------

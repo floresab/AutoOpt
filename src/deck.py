@@ -4,8 +4,9 @@ nQMCC variational w.f. parameters
 """
 from parameters import PARAMETERS
 from copy import deepcopy
-
+#-----------------------------------------------------------------------
 class SPATIAL_SYMMETRY:
+#-----------------------------------------------------------------------
     BLSNAME=""
     L_CORE=""
     S_CORE=""
@@ -365,15 +366,35 @@ class DECK:
                     self.SS[b].Write(params,file,"")
         file.close()
 # ----------------------------------------------------------------------
+    def UpdateFloats(self, params: PARAMETERS, precision: int):
+# ----------------------------------------------------------------------
+        for key,val in self.__dict__.items():
+            if (key not in ["FILE_NAME","NAME"]):
+                if isinstance(val,list):
+                    self.__dict__[key]=[f"{float(i):.{precision}f}" for i in self.__dict__[key]]
+                else:
+                    if "." in val: self.__dict__[key]=f"{float(val):.{precision}f}"
+# ----------------------------------------------------------------------
+        if params.NBETA >=1:
+            for ss in self.SS:
+                for key,val in ss.__dict__.items():
+                    if isinstance(val,list):
+                        ss.__dict__[key]=[f"{float(i):.{precision}f}" for i in self.__dict__[key]]
+                    elif isinstance(val,int):
+                        pass
+                    else:
+                        if "." in val: ss.__dict__[key]=f"{float(val):.{precision}f}"
+# ----------------------------------------------------------------------
 def GenerateZeroDeck(params: PARAMETERS, dk_: DECK):
 # ----------------------------------------------------------------------
     dk=deepcopy(dk_)
 # ----------------------------------------------------------------------
     for key,val in dk.__dict__.items():
-        if isinstance(val,list):
-            dk.__dict__[key]=["0." for i in dk.__dict__[key]]
-        else:
-            if "." in val: dk.__dict__[key]="0."
+        if (key not in ["FILE_NAME","NAME"]):
+            if isinstance(val,list):
+                dk.__dict__[key]=["0." for i in dk.__dict__[key]]
+            else:
+                if "." in val: dk.__dict__[key]="0."
 # ----------------------------------------------------------------------
     if params.NBETA >=1:
         for ss in dk.SS:
@@ -390,6 +411,7 @@ def GenerateZeroDeck(params: PARAMETERS, dk_: DECK):
 def GenerateOptFile(params: PARAMETERS, dk: DECK, file_name, instructions: list):
 # ----------------------------------------------------------------------
     opt=GenerateZeroDeck(params,dk)
+    opt.FILE_NAME=file_name
     try:
         for i in instructions:
             if i["ss"]:
@@ -405,4 +427,5 @@ def GenerateOptFile(params: PARAMETERS, dk: DECK, file_name, instructions: list)
     except KeyError:
         print(f"GenerateOptFile *** BAD KEY: {i["key"]} ***")
     opt.Write(params,file_name)
+    return opt
 # ----------------------------------------------------------------------
