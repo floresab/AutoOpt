@@ -3,7 +3,7 @@ control.py
 Control Files for nQMCC
 """
 #-----------------------------------------------------------------------
-class WAVEFUNCTION_INPUT:
+class wavefunction_input_t:
 #-----------------------------------------------------------------------
     IDX=0 #NUMBER OF LINES TO READ
     PARAM_FILE ="" # PARAM FILES
@@ -70,15 +70,15 @@ class WAVEFUNCTION_INPUT:
 #-----------------------------------------------------------------------
                 pass
 #-----------------------------------------------------------------------
-class CONTROL:
+class control_t:
 #-----------------------------------------------------------------------
     FILE_NAME=""
     BASIS =""                                    #
     BRA_EQ_KET=""
     BRA_TYPE=""                                 # WAVEFUNCTION TYPE FOR BRA
     KET_TYPE=""                                 # WAVEFUNCTION TYPE FOR KET
-    INPUT_BRA=WAVEFUNCTION_INPUT("init",[])
-    INPUT_KET=WAVEFUNCTION_INPUT("init",[])
+    INPUT_BRA=wavefunction_input_t("init",[])
+    INPUT_KET=wavefunction_input_t("init",[])
     RW_WALK=""                                  # READ / WRITE COORDINATES + PAIR ORDER + RNG + PSISQ
     WALK_FILE=""                                # NAME OF STORED WALK
     LKE=""                                      # SWITCH FOR KINETIC ENERGY
@@ -141,13 +141,13 @@ class CONTROL:
         self.BRA_EQ_KET=data[1][0]
         self.BRA_TYPE=data[2][0]
 #----------------------------------------------------------------------
-        self.INPUT_BRA=WAVEFUNCTION_INPUT(self.BRA_TYPE,data[3:10])
+        self.INPUT_BRA=wavefunction_input_t(self.BRA_TYPE,data[3:10])
         data=data[3+self.INPUT_BRA.IDX:]
 #----------------------------------------------------------------------
         if (self.BRA_EQ_KET != ".true."):
 #----------------------------------------------------------------------
             self.KET_TYPE=data[0][0]
-            self.INPUT_KET=WAVEFUNCTION_INPUT(self.KET_TYPE,data[1:8])
+            self.INPUT_KET=wavefunction_input_t(self.KET_TYPE,data[1:8])
             data=data[1+self.INPUT_KET.IDX:]
 #----------------------------------------------------------------------
         self.RW_WALK,self.WALK_FILE=data[0][:2]

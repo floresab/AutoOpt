@@ -3,7 +3,7 @@ parameters.py
 Nuclei Param Files for nQMCC
 """
 #-----------------------------------------------------------------------
-class PARAMETERS:
+class parameters_t:
     NPART=0
     NPROT=0
     ISOSPIN_NT=0

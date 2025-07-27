@@ -1,11 +1,11 @@
 """
 deck.py
-nQMCC variational w.f. parameters
+nQMCC variational w.f. parameters_t
 """
-from parameters import PARAMETERS
+from parameters import parameters_t
 from copy import deepcopy
 #-----------------------------------------------------------------------
-class SPATIAL_SYMMETRY:
+class spatial_symmetry_t:
 #-----------------------------------------------------------------------
     BLSNAME=""
     L_CORE=""
@@ -93,7 +93,7 @@ class SPATIAL_SYMMETRY:
     D_WBALPH=""
     D_BSCAT=""
 #-----------------------------------------------------------------------
-    def __init__(self,params: PARAMETERS,data_):
+    def __init__(self,params: parameters_t,data_):
 #-----------------------------------------------------------------------
         data=deepcopy(data_)
 #-----------------------------------------------------------------------
@@ -154,7 +154,7 @@ class SPATIAL_SYMMETRY:
 #-----------------------------------------------------------------------
             self.D_WSE,self.D_WSV,self.D_WSR,self.D_WSA,self.D_WBRHO,self.D_WBALPH=data[0][:6]
 #-----------------------------------------------------------------------
-    def Write(self,params: PARAMETERS, file, last_char="\n"):
+    def Write(self,params: parameters_t, file, last_char="\n"):
 #-----------------------------------------------------------------------
         file.write(self.BLSNAME+"\n")
 #-----------------------------------------------------------------------
@@ -190,7 +190,7 @@ class SPATIAL_SYMMETRY:
 #-----------------------------------------------------------------------
             file.write(" ".join([self.D_WSE,self.D_WSV,self.D_WSR,self.D_WSA,self.D_WBRHO,self.D_WBALPH])+last_char)
 #-----------------------------------------------------------------------
-class DECK:
+class deck_t:
     FILE_NAME=""
     SS=[]
     NAME=""
@@ -258,12 +258,12 @@ class DECK:
     QDDD1=""
     QDDD2=""
 #-----------------------------------------------------------------------
-    def __init__(self, params: PARAMETERS, file_name_):
+    def __init__(self, params: parameters_t, file_name_):
 #-----------------------------------------------------------------------
         self.FILE_NAME = file_name_
         self.Read(params)
 #-----------------------------------------------------------------------
-    def Read(self,params: PARAMETERS):
+    def Read(self,params: parameters_t):
 #-----------------------------------------------------------------------
         file = open(self.FILE_NAME, 'r')
         data = [(l.strip().split()) for l in file.readlines()]
@@ -315,10 +315,10 @@ class DECK:
 # ----------------------------------------------------------------------
         if params.NPPART >= 1:
             for b in range(params.NBETA):
-                self.SS.append(SPATIAL_SYMMETRY(params,data))
+                self.SS.append(spatial_symmetry_t(params,data))
                 if b != params.NBETA: data=data[self.SS[b].IDX:]
 #-----------------------------------------------------------------------
-    def Write(self,params: PARAMETERS,out_file):
+    def Write(self,params: parameters_t,out_file):
 # ----------------------------------------------------------------------
         file = open(out_file, 'w')
         file.write(self.NAME+"\n")
@@ -366,7 +366,7 @@ class DECK:
                     self.SS[b].Write(params,file,"")
         file.close()
 # ----------------------------------------------------------------------
-    def UpdateFloats(self, params: PARAMETERS, precision: int):
+    def UpdateFloats(self, params: parameters_t, precision: int):
 # ----------------------------------------------------------------------
         for key,val in self.__dict__.items():
             if (key not in ["FILE_NAME","NAME"]):
@@ -385,7 +385,7 @@ class DECK:
                     else:
                         if "." in val: ss.__dict__[key]=f"{float(val):.{precision}f}"
 # ----------------------------------------------------------------------
-def GenerateZeroDeck(params: PARAMETERS, dk_: DECK):
+def GenerateZeroDeck(params: parameters_t, dk_: deck_t):
 # ----------------------------------------------------------------------
     dk=deepcopy(dk_)
 # ----------------------------------------------------------------------
@@ -408,7 +408,7 @@ def GenerateZeroDeck(params: PARAMETERS, dk_: DECK):
 # ----------------------------------------------------------------------
     return dk
 # ----------------------------------------------------------------------
-def GenerateOptFile(params: PARAMETERS, dk: DECK, file_name, instructions: list):
+def GenerateOptFile(params: parameters_t, dk: deck_t, file_name, instructions: list):
 # ----------------------------------------------------------------------
     opt=GenerateZeroDeck(params,dk)
     opt.FILE_NAME=file_name

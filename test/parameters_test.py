@@ -3,9 +3,9 @@ import os
 #-----------------------------------------------------------------------
 sys.path.append(os.path.join(os.path.dirname(__file__), "../src"))
 #-----------------------------------------------------------------------
-from parameters import PARAMETERS
+from parameters import parameters_t
 #-----------------------------------------------------------------------
 if __name__=="__main__":
-  params=PARAMETERS("test.params")
+  params=parameters_t("test.params")
   params.Write("dummy.out")
 #-----------------------------------------------------------------------

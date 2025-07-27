@@ -3,9 +3,9 @@ import os
 #-----------------------------------------------------------------------
 sys.path.append(os.path.join(os.path.dirname(__file__), "../src"))
 #-----------------------------------------------------------------------
-from control import CONTROL
+from control import control_t
 #-----------------------------------------------------------------------
 if __name__=="__main__":
-  ctrl=CONTROL("test.ctrl")
+  ctrl=control_t("test.ctrl")
   ctrl.Write("dummy.out")
 #-----------------------------------------------------------------------
