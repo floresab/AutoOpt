@@ -1,0 +1,16 @@
+he4n_1hp                                 name
+sc_scattering                            system_type
+mpirun -np 4                             
+/home/floresab/qmc/nQMCC/                nqmcc_dir
+/home/floresab/qmc/nQMCC/build/bin/      bin_dir
+/home/floresab/qmc/py/AutoOpt/test/      working_dir
+/home/floresab/qmc/nQMCC/ctrl/he4.ctrl   ctrl
+/home/floresab/qmc/nQMCC/ctrl/he4n.ctrl  scattering_ctrl
+constants/fbn95.const                    constant_file
+pots/av18.2bp                            2b_potential_files
+pots/none.3bp                            3b_potential_files
+0                                        ss_idx
+0.5                                      e_min
+6.0                                      e_max
+0.25                                     de
+0.25                                     init_db
