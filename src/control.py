@@ -70,6 +70,19 @@ class wavefunction_input_t:
 #-----------------------------------------------------------------------
                 pass
 #-----------------------------------------------------------------------
+    def AddPrefix(self,wf_type,prefix):
+#-----------------------------------------------------------------------
+        self.PARAM_FILE =JoinPath(prefix,self.PARAM_FILE)
+        self.DECK_FILE  =JoinPath(prefix,self.DECK_FILE)
+        self.SPIN_FILE  =JoinPath(prefix,self.SPIN_FILE)
+        self.YLM_FILE   =JoinPath(prefix,self.YLM_FILE)
+        self.PHI_FILE   =JoinPath(prefix,self.PHI_FILE)
+        self.CONFIG_FILE=JoinPath(prefix,self.CONFIG_FILE)
+#-----------------------------------------------------------------------
+        if wf_type.strip("\'") == "product":
+            self.PRODUCT_PARAM_FILE=JoinPath(prefix,self.PRODUCT_PARAM_FILE)
+            self.PRODUCT_DECK_FILE =JoinPath(prefix,self.PRODUCT_DECK_FILE )
+#-----------------------------------------------------------------------
 class control_t:
 #-----------------------------------------------------------------------
     FILE_NAME=""
@@ -126,10 +139,11 @@ class control_t:
     OPTIMIZED_DECK_FILE=""                      # DECK WITH OPTIMAL PARAMETERS
     SCRATCH_DIR=""                              # TEMPORARY STORAGE DIRECTORY
 #-----------------------------------------------------------------------
-    def __init__(self,file_name_):
+    def __init__(self,file_name_,prefix=""):
 #-----------------------------------------------------------------------
         self.FILE_NAME = file_name_
         self.Read()
+        self.AddPrefix(prefix)
 #-----------------------------------------------------------------------
     def Read(self):
 #-----------------------------------------------------------------------
@@ -207,4 +221,12 @@ class control_t:
         file.write(self.OPTIMIZED_DECK_FILE+"\n")
         file.write(self.SCRATCH_DIR)
         file.close()
+#----------------------------------------------------------------------
+    def AddPrefix(self,prefix):
+        self.WALK_FILE=JoinPath(prefix,self.WALK_FILE)
+        self.INPUT_BRA.AddPrefix(self.BRA_TYPE,prefix)
+        if not self.BRA_EQ_KET: self.INPUT_KET.AddPrefix(self.KET_TYPE,prefix)
+#----------------------------------------------------------------------
+def JoinPath(p1,p2):
+    return f"\'{p1.strip("\'")}{p2.strip("\'")}\'"
 #----------------------------------------------------------------------

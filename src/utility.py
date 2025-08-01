@@ -13,6 +13,7 @@ from control import control_t
 #-----------------------------------------------------------------------
 class utility_t:
     FILE_NAME=""
+    NAME=""
     SYSTEM_TYPE=""
     RUN_CMD=[]
     NQMCC_DIR=""
@@ -30,13 +31,16 @@ class utility_t:
 #-----------------------------------------------------------------------
 #   single channel scattering
 #-----------------------------------------------------------------------
-    SCATTERING_CTRL_FILE=""
+    NUM_CHANNELS=0
+    SCATTERING_CTRL_FILES=[]
+    SS_INDEXS=[]
     OPTIMIZE_TARGET=False
-    SS_IDX=0
     ENERGY_LOWER_BOUND=0.5
     ENERGY_UPPER_BOUND=6.0
     DELTA_ENERGY=0.25
-    INITIAL_DB=0.25
+    INITIAL_BSCAT=0.25
+    INITIAL_DELTA_BSCAT=0.25
+    MAX_BSCAT_SLOPE=2.0
 #-----------------------------------------------------------------------
     def __init__(self, file_name_):
         self.FILE_NAME = file_name_
@@ -62,12 +66,13 @@ class utility_t:
 #-----------------------------------------------------------------------
         if self.SYSTEM_TYPE.lower() == "sc_scattering":
             data=data[13:]
-            self.SCATTERING_CTRL_FILE=data[0][0]
-            self.OPTIMIZE_TARGET = 1 == int(data[1][0])
-            self.SS_IDX=int(data[2][0])
-            self.ENERGY_LOWER_BOUND, self.ENERGY_UPPER_BOUND, self.DELTA_ENERGY=[float(d) for d in data[3][:3]]
-            self.INITIAL_DELTA_BSCAT=float(data[4][0])
-
+            self.NUM_CHANNELS=int(data[0][0])
+            self.SCATTERING_CTRL_FILES=data[1][:self.NUM_CHANNELS]
+            self.SS_INDEXS=[int(d) for d in data[2][:self.NUM_CHANNELS]]
+            self.OPTIMIZE_TARGET = 1 == int(data[3][0])
+            self.ENERGY_LOWER_BOUND, self.ENERGY_UPPER_BOUND, self.DELTA_ENERGY=[float(d) for d in data[4][:3]]
+            self.INITIAL_BSCAT,self.INITIAL_DELTA_BSCAT=[float(d) for d in data[5][:2]]
+            self.MAX_BSCAT_SLOPE=float(data[6][0])
 #-----------------------------------------------------------------------
 def nQMCC(binary: str, ctrl: control_t, bin_dir: str, runner: list, write_log=False, log_name=""):
         cmd = f"{" ".join(runner)} {bin_dir}{binary}".split()

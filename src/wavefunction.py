@@ -11,10 +11,11 @@ from utility import nQMCC
 #-----------------------------------------------------------------------
 class wavefunction_t:
 #-----------------------------------------------------------------------
-    def __init__(self,ctrl_file_name,bin_dir_,run_cmd_):
-        self.CTRL=control_t(ctrl_file_name)
+    def __init__(self,ctrl_file_name,nqmcc_dir_,bin_dir_,run_cmd_):
+        self.CTRL=control_t(ctrl_file_name,nqmcc_dir_)
         self.PARAMS=parameters_t(self.CTRL.INPUT_BRA.PARAM_FILE)
         self.DK=deck_t(self.PARAMS,self.CTRL.INPUT_BRA.DECK_FILE)
+        self.NQMCC_DIR=nqmcc_dir_
         self.BIN_DIR=bin_dir_
         self.RUN_CMD=run_cmd_
 #-----------------------------------------------------------------------
@@ -34,3 +35,14 @@ class wavefunction_t:
         rx=r' OPTIMIZED ENERGY: (-?\d+\.\d+) \((\d+\.\d+)\)'
         opt_e,opt_v = findall(rx, log)[-1]
         return opt_e,opt_v
+#-----------------------------------------------------------------------
+def InitPShellScattWF(scatter: wavefunction_t,target: wavefunction_t,out_file):
+    for key,val in target.DK.__dict__.items():
+        if (key not in ["FILE_NAME","NAME"]):
+            if isinstance(val,list):
+                scatter.DK.__dict__[key]=val
+            else:
+                if "." in val: scatter.DK.__dict__[key]=val
+    scatter.DK.FILE_NAME=out_file
+    scatter.DK.Write(scatter.PARAMS,out_file)
+    scatter.CTRL.INPUT_BRA.DECK_FILE=out_file
