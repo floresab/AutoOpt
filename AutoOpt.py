@@ -19,13 +19,14 @@ def SingleChannelScattering(util: utility_t):
 #-----------------------------------------------------------------------
     BREAK="="*72
 #-----------------------------------------------------------------------
+    print(BREAK)
     print("SETTING UP WORKING ENVIORMENT")
     try:
         os.mkdir(util.WORKING_DIR)
         os.chdir(util.WORKING_DIR)
     except FileExistsError:
         print("***WORKING DIRECTORY EXISTS***")
-        util.WORKING_DIR=f"{util.WORKING_DIR}{util.NAME}-{"_".join(str(datetime.now()).split())}"
+        util.WORKING_DIR=f"{util.WORKING_DIR}{util.NAME}-{"_".join(str(datetime.now()).split())}/"
         print(f"CURRENT WORKING DIRECTORY: {util.WORKING_DIR}")
         os.mkdir(util.WORKING_DIR)
         os.chdir(util.WORKING_DIR)
@@ -49,42 +50,51 @@ def SingleChannelScattering(util: utility_t):
     print("... DONE")
     print(BREAK)
 #-----------------------------------------------------------------------
-    for scat_ctrl,ssi in zip(util.SCATTERING_CTRL_FILES,util.SS_INDEXS):
+    for const,pot2b,pot3b in zip(util.CONSTANTS_FILES,util.TWO_BODY_FILES,util.THREE_BODY_FILES):
+        pot2b_label=pot2b.split(".")[0]
+        pot3b_label=pot3b.split(".")[0]
+        tname=f"{target_label}.{pot2b_label}.{pot3b_label}"
+        target.CTRL.CONST_FILE=f"'{util.NQMCC_DIR}constants/{const}'"
+        target.CTRL.L2BP_FILE=f"'{util.NQMCC_DIR}pots/{pot2b}'"
+        target.CTRL.L3BP_FILE=f"'{util.NQMCC_DIR}pots/{pot3b}'"
+        print(f"CONSTANTS: {const}")
+        print(f"V2B: {pot2b}")
+        print(f"V3B: {pot3b}")
+        print(BREAK)
 #-----------------------------------------------------------------------
-        print("SETTING UP SCATTERING WAVEFUNCTION")
-        scatter = wavefunction_t(scat_ctrl,util.NQMCC_DIR,util.BIN_DIR,util.RUN_CMD)
-        scatter_label=scatter.DK.NAME.strip("\'")
-        scatter.CTRL.FILE_NAME=f"{util.WORKING_DIR}scatter.ctrl"
-        scatter.CTRL.NUM_BLOCKS=util.NUM_BLOCKS
-        scatter.CTRL.BLOCK_SIZE=util.BLOCK_SIZE 
-        scatter.CTRL.WALKERS_PER_NODE=util.WALKERS_PER_NODE
-        scatter.CTRL.NUM_OPT_SAMPLES=util.NUM_OPT_SAMPLES
-        print("... DONE")
-#-----------------------------------------------------------------------
-        for const,pot2b,pot3b in zip(util.CONSTANTS_FILES,util.TWO_BODY_FILES,util.THREE_BODY_FILES):
-#-----------------------------------------------------------------------
-            pot2b_label=pot2b.split(".")[0]
-            pot3b_label=pot3b.split(".")[0]
-            tname=f"{target_label}.{pot2b_label}.{pot3b_label}"
-            sname=f"{scatter_label}.{pot2b_label}.{pot3b_label}"
-            print(BREAK)
-            print(f"Scanning BSCAT")
-            print(f"Target:  {target_label}")
-            print(f"Scatter: {scatter_label}")
-            print(f"Constants: {const}")
-            print(f"V2B: {pot2b}")
-            print(f"V3B: {pot3b}")
-            target.CTRL.CONST_FILE=f"'{util.NQMCC_DIR}constants/{const}'"
-            target.CTRL.L2BP_FILE=f"'{util.NQMCC_DIR}pots/{pot2b}'"
-            target.CTRL.L3BP_FILE=f"'{util.NQMCC_DIR}pots/{pot3b}'"
-            print(BREAK)
-            print(f"EVALUATING TARGET: {target_label}")
+        if util.OPTIMIZE_TARGET:
+            print(f"OPTIMIZING TARGET: {tname}")
+            ecore,vcore=[0,1]
+        else:
+            print(f"EVALUATING TARGET: {tname}")
             ecore,vcore=target.Evaluate(True,tname)
             print(ecore,vcore)
+#-----------------------------------------------------------------------
+        print(BREAK)
+#-----------------------------------------------------------------------
+        for scat_ctrl,ssi in zip(util.SCATTERING_CTRL_FILES,util.SS_INDEXS):
+#-----------------------------------------------------------------------
+            print("SETTING UP SCATTERING WAVEFUNCTION")
+            scatter = wavefunction_t(scat_ctrl,util.NQMCC_DIR,util.BIN_DIR,util.RUN_CMD)
+            scatter_label=scatter.DK.NAME.strip("\'")
+            scatter.CTRL.FILE_NAME=f"{util.WORKING_DIR}scatter.ctrl"
+            scatter.CTRL.NUM_BLOCKS=util.NUM_BLOCKS
+            scatter.CTRL.BLOCK_SIZE=util.BLOCK_SIZE 
+            scatter.CTRL.WALKERS_PER_NODE=util.WALKERS_PER_NODE
+            scatter.CTRL.NUM_OPT_SAMPLES=util.NUM_OPT_SAMPLES
+            scatter.CTRL.CONST_FILE=f"'{util.NQMCC_DIR}constants/{const}'"
+            scatter.CTRL.L2BP_FILE=f"'{util.NQMCC_DIR}pots/{pot2b}'"
+            scatter.CTRL.L3BP_FILE=f"'{util.NQMCC_DIR}pots/{pot3b}'"
+            sname=f"{scatter_label}.{pot2b_label}.{pot3b_label}"
+            print(f"Scattering wave function: {sname}")
+            print("... DONE")
+            print(BREAK)
 #-----------------------------------------------------------------------
             scatter.DK.SS[ssi].BSCAT = str(util.INITIAL_BSCAT)
             #Copy Core deck to scatter deck, write deck to file
             InitPShellScattWF(scatter,target,f"{util.WORKING_DIR}temp.dk")
+            print(f"SCANNING BSCAT")
+            print(BREAK)
 #-----------------------------------------------------------------------
             #SingleChannelScan(util,scatter,ecore,vcore)
 #-----------------------------------------------------------------------
