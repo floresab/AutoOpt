@@ -40,41 +40,6 @@ Optimize Logic
 2. Scan WSE for the Spatial Symmetry (defualt: delta=0.5,num_walks=5,samples_per_walk=5)
 3. Optimize correlations that only affect pairs/triples that include scattering nucleon (without wse)
 4. Optimize correlations that only affect pairs/triples that include scattering nucleon (with wse)
-
-    wse_corr, _ = zero_var_params(
-        param_file,
-        deck_file,
-        ss,
-        correlation_groups=[
-            {'params': ['wse'], 'mode': 'set', 'value': WSE_OPT_VALUE}
-        ]
-    )
-    spu_corrs, _ = zero_var_params(
-        param_file,
-        deck_file,
-        ss,
-        correlation_groups=[
-            {'params': ['qssp1', 'qssp2'], 'mode': 'scale', 'value': OPT_SCALE},
-            {'params': ['spu', 'spv', 'spr', 'spa', 'spb', 'spc', 'spk', 'spl'], 'mode': 'scale', 'value': OPT_SCALE},
-            {'params': ['wsr', 'wsa'], 'mode': 'scale', 'value': OPT_SCALE}
-        ]
-    )
-    all_corrs, _ = zero_var_params(
-        param_file,
-        deck_file,
-        ss,
-        correlation_groups=[
-            {'params': ['wse'], 'mode': 'set', 'value': WSE_OPT_VALUE},
-            {'params': ['qssp1', 'qssp2'], 'mode': 'scale', 'value': OPT_SCALE},
-            {'params': ['spu', 'spv', 'spr', 'spa', 'spb', 'spc', 'spk', 'spl'], 'mode': 'scale', 'value': OPT_SCALE},
-            {'params': ['wsr', 'wsa'], 'mode': 'scale', 'value': OPT_SCALE}
-        ]
-    )
-        results.append()
-    # --- Save Results ---
-    results_sorted = sorted(results, key=lambda r: r["E_rel"])
-    with open("optimized_decks.json", "w") as f:
-        json.dump(results_sorted, f, indent=2)
 """
 def SingleChannelOptimize(bscat:float, \
                           work_dir:str, \
@@ -127,6 +92,7 @@ def SingleChannelOptimize(bscat:float, \
 #-----------------------------------------------------------------------
     scatter.CTRL.NUM_OPT_SAMPLES="5"
     scatter.CTRL.NUM_OPT_WALKS="5"
+#-----------------------------------------------------------------------
     log=f"{work_dir}logs/{label}.wse.{bscat:.4f}"
     print(f"BEGIN WSE SCAN: {log}.optimize")
     e,v=scatter.Optimize(opt_wse,dk_name,True,log)
@@ -138,6 +104,7 @@ def SingleChannelOptimize(bscat:float, \
 #-----------------------------------------------------------------------
     scatter.CTRL.NUM_OPT_SAMPLES=num_samples
     scatter.CTRL.NUM_OPT_WALKS="1"
+#-----------------------------------------------------------------------
     log=f"{work_dir}logs/{label}.corr.{bscat:.4f}"
     print(f"BEGIN CORRELATION OPTIMIZATION: {log}.optimize")
     opt_corr_file_name=f"\'{work_dir}opt/{label}.corr.{bscat:.4f}.opt\'"
@@ -178,6 +145,7 @@ def SingleChannelScan(util:utility_t,\
                       ecore:float,vcore:float):
 #-----------------------------------------------------------------------
     scan=[]
+    BREAK="="*72
 #-----------------------------------------------------------------------
 # INITIAL BSCATS
 #-----------------------------------------------------------------------
@@ -191,5 +159,58 @@ def SingleChannelScan(util:utility_t,\
 #-----------------------------------------------------------------------
 # MOVE WITH INFORMATION ABOUT BSCAT(EREL) => DB_DE
 #-----------------------------------------------------------------------
-    db_de=abs(scan[2]["EREL"]-scan[1]["EREL"])/(2.*util.INITIAL_DELTA_BSCAT)
-    print(db_de)
+    db_de_i=(2.*util.INITIAL_DELTA_BSCAT)/abs(scan[2]["EREL"]-scan[1]["EREL"])
+#-----------------------------------------------------------------------
+    count=0
+    db_de=db_de_i
+    scatter.DK.FILE_NAME=scan[0]["DECK_PATH"]
+    bscat_prev=util.INITIAL_BSCAT
+    erel_prev=scan[0]["EREL"]
+    do_scan=True
+#-----------------------------------------------------------------------
+    print("FOWARD SCAN")
+    print(BREAK)
+#-----------------------------------------------------------------------
+    while (do_scan):
+#-----------------------------------------------------------------------
+        count+=1
+        idx=2+count
+        print(db_de,util.DELTA_ENERGY)
+        db=db_de*util.DELTA_ENERGY
+        bscat=bscat_prev+db
+        print(bscat)
+        scan.append(SingleChannelOptimize(bscat,util.WORKING_DIR,label,scatter,ssi,ecore,vcore))
+#-----------------------------------------------------------------------
+        db_de=db/abs(scan[idx]["EREL"]-erel_prev)
+#-----------------------------------------------------------------------
+        bscat_prev=bscat
+        erel_prev=scan[idx]["EREL"]
+#-----------------------------------------------------------------------
+        if count >= 2: do_scan = False
+#-----------------------------------------------------------------------
+    count=0
+    db_de=db_de_i
+    scatter.DK.FILE_NAME=scan[0]["DECK_PATH"]
+    bscat_prev=util.INITIAL_BSCAT
+    erel_prev=scan[0]["EREL"]
+    do_scan=True
+#-----------------------------------------------------------------------
+    print("BACKWARD SCAN")
+    print(BREAK)
+#-----------------------------------------------------------------------
+    while (do_scan):
+#-----------------------------------------------------------------------
+        count+=1
+        idx=2+count
+        db=db_de*util.DELTA_ENERGY
+        bscat=bscat_prev-db
+        scan.append(SingleChannelOptimize(bscat,util.WORKING_DIR,label,scatter,ssi,ecore,vcore))
+#-----------------------------------------------------------------------
+        db_de=db/abs(scan[idx]["EREL"]-erel_prev)
+#-----------------------------------------------------------------------
+        bscat_prev=bscat
+        erel_prev=scan[idx]["EREL"]
+#-----------------------------------------------------------------------
+        if count >= 2: do_scan = False
+    for ele in scan:
+        print(ele)
