@@ -34,11 +34,11 @@ class wavefunction_t:
         self.CTRL.INPUT_BRA.DECK_FILE=self.CTRL.OPTIMIZED_DECK_FILE
         rx=r' OPTIMIZED ENERGY: (-?\d+\.\d+) \((\d+\.\d+)\)'
         opt_e,opt_v = findall(rx, log)[-1]
-        return opt_e,opt_v
+        return float(opt_e),float(opt_v)
 #-----------------------------------------------------------------------
 def InitPShellScattWF(scatter: wavefunction_t,target: wavefunction_t,out_file):
     for key,val in target.DK.__dict__.items():
-        if (key not in ["FILE_NAME","NAME"]):
+        if (key not in ["FILE_NAME","NAME","SS"]):
             if isinstance(val,list):
                 scatter.DK.__dict__[key]=val
             else:

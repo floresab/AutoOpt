@@ -33,7 +33,7 @@ def SingleChannelScattering(util: utility_t):
 #-----------------------------------------------------------------------
     os.mkdir("ctrl")
     os.mkdir("logs")
-    os.mkdir("min")
+    os.mkdir("dk")
     os.mkdir("opt")
 #-----------------------------------------------------------------------
     print("... DONE")
@@ -68,7 +68,7 @@ def SingleChannelScattering(util: utility_t):
         else:
             print(f"EVALUATING TARGET: {tname}")
             ecore,vcore=target.Evaluate(True,tname)
-            print(ecore,vcore)
+            print(f"E = {ecore:.4f} +- {vcore:.4f}")
 #-----------------------------------------------------------------------
         print(BREAK)
 #-----------------------------------------------------------------------
@@ -92,11 +92,11 @@ def SingleChannelScattering(util: utility_t):
 #-----------------------------------------------------------------------
             scatter.DK.SS[ssi].BSCAT = str(util.INITIAL_BSCAT)
             #Copy Core deck to scatter deck, write deck to file
-            InitPShellScattWF(scatter,target,f"{util.WORKING_DIR}temp.dk")
+            InitPShellScattWF(scatter,target,f"\'{util.WORKING_DIR}temp.dk\'")
             print(f"SCANNING BSCAT")
             print(BREAK)
 #-----------------------------------------------------------------------
-            #SingleChannelScan(util,scatter,ecore,vcore)
+            SingleChannelScan(util.WORKING_DIR,sname,scatter,ssi,ecore,vcore)
 #-----------------------------------------------------------------------
 def AutoOptAPI(util: utility_t):
 #-----------------------------------------------------------------------

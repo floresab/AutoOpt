@@ -3,10 +3,10 @@ bscat.py
 Scans in Boundary Condition to generate wavefunctions with various energies
 """
 #-----------------------------------------------------------------------
-from copy import deepcopy
+import numpy as np
 #-----------------------------------------------------------------------
 from utility import utility_t
-from deck import deck_t
+from deck import deck_t,GenerateOptFile
 from wavefunction import wavefunction_t
 #-----------------------------------------------------------------------
 """
@@ -83,21 +83,61 @@ Optimize Logic
         json.dump(results_sorted, f, indent=2)
 """
 #-----------------------------------------------------------------------
-def SingleChannelScan(util: utility_t, target: wavefunction_t, scatter: wavefunction_t):
+def SingleChannelScan(work_dir:str, label:str, scatter:wavefunction_t,ssi:int, ecore:float,vcore:float):
 #-----------------------------------------------------------------------
     scan=[]
-    opt_wse=GenerateOptFile(scatter.PARAMS, scatter.DK, "opt/wse.opt", \
-        [{"ss":True,"ss_idx":util.SS_IDX,"key":"WSE","scale":0, "flat":0.5}])
+    OPT_SCALE=0.2
+    opt_wse_file_name=f"\'{work_dir}opt/wse.opt\'"
+    wse_i=[{"ss":True,"ss_idx":ssi,"key":"WSE","scale":0, "flat":0.5}]
 #-----------------------------------------------------------------------
+    instructions=[{"ss":True,"ss_idx":ssi,"key":"QSSP1","scale":OPT_SCALE, "flat":0.0}\
+                 ,{"ss":True,"ss_idx":ssi,"key":"QSSP2","scale":OPT_SCALE, "flat":0.0}\
+                 ,{"ss":True,"ss_idx":ssi,"key":"SPU"  ,"scale":OPT_SCALE, "flat":0.0}\
+                 ,{"ss":True,"ss_idx":ssi,"key":"SPV"  ,"scale":OPT_SCALE, "flat":0.0}\
+                 ,{"ss":True,"ss_idx":ssi,"key":"SPA"  ,"scale":OPT_SCALE, "flat":0.0}\
+                 ,{"ss":True,"ss_idx":ssi,"key":"SPB"  ,"scale":OPT_SCALE, "flat":0.0}\
+                 ,{"ss":True,"ss_idx":ssi,"key":"SPC"  ,"scale":OPT_SCALE, "flat":0.0}\
+                 ,{"ss":True,"ss_idx":ssi,"key":"SPK"  ,"scale":OPT_SCALE, "flat":0.0}\
+                 ,{"ss":True,"ss_idx":ssi,"key":"SPL"  ,"scale":OPT_SCALE, "flat":0.0}\
+                 ,{"ss":True,"ss_idx":ssi,"key":"WSR"  ,"scale":OPT_SCALE, "flat":0.0}\
+                 ,{"ss":True,"ss_idx":ssi,"key":"WSA"  ,"scale":OPT_SCALE, "flat":0.0}]
+#-----------------------------------------------------------------------
+    instructions_all=instructions+wse_i
+#-----------------------------------------------------------------------
+    opt_wse=GenerateOptFile(scatter.PARAMS, scatter.DK, opt_wse_file_name,wse_i)
+#-----------------------------------------------------------------------
+    num_samples=scatter.CTRL.NUM_OPT_SAMPLES
+#-----------------------------------------------------------------------
+    bscat=float(scatter.DK.SS[ssi].BSCAT)
+    print(f"BSCAT = {bscat:.4f}")
+    dk_name=f"\'{work_dir}dk/{label}.{bscat:.4f}.dk\'"
     scatter.CTRL.INPUT_BRA.DECK_FILE=scatter.DK.FILE_NAME
-    opt_dk_file=f"{util.WORKING_DIR}/dk/init_{util.INITIAL_BSCAT:4f}.dk"
-    print(f"\n🔁 bscat = {util.INITIAL_BSCAT:.4f}")
-    #e,v=scatter.Optimize(opt_wse,,True,f"{util.WORKING_DIR}/log/initial_bscat.log")
-    #e_target,v_target=[-23.75,0.]
-    #erel=e_target-e
-    #vrel=v_target**2+v**2
-    #print(erel,vrel)
-
-
-
-
+    log=f"{work_dir}logs/{label}.start.{bscat:.4f}"
+    print(f"BEGIN INITIAL EVALUATION: {log}.energy")
+    e,v=scatter.Evaluate(True,log)
+    e_start=e-ecore
+    v_start=np.sqrt(v**2+vcore**2)
+    print(f"EREL = {e_start:.4f} +- {v_start:.4f}")
+#-----------------------------------------------------------------------
+    scatter.CTRL.NUM_OPT_SAMPLES="5"
+    scatter.CTRL.NUM_OPT_WALKS="5"
+    log=f"{work_dir}logs/{label}.wse.{bscat:.4f}"
+    print(f"BEGIN WSE SCAN: {log}.optimize")
+    e,v=scatter.Optimize(opt_wse,dk_name,True,log)
+    wse_erel=e-ecore
+    wse_vrel=np.sqrt(v**2+vcore**2)
+    print(f"OPTIMAL WSE = {float(scatter.DK.SS[ssi].WSE):.4f}")
+    print(f"EREL = {wse_erel:.4f} +- {wse_vrel:.4f}")
+    print(f"WSE OPTIMIZATION LOWERED ENERGY BY: {wse_erel-e_start:.4f} MeV")
+#-----------------------------------------------------------------------
+    scatter.CTRL.NUM_OPT_SAMPLES=num_samples
+    scatter.CTRL.NUM_OPT_WALKS="1"
+    log=f"{work_dir}logs/{label}.corr.{bscat:.4f}"
+    print(f"BEGIN CORRELATION OPTIMIZATION: {log}.optimize")
+    opt_corr_file_name=f"\'{work_dir}opt/{label}.corr.{bscat:.4f}.opt\'"
+    opt_corr=GenerateOptFile(scatter.PARAMS, scatter.DK, opt_corr_file_name,instructions)
+    e,v=scatter.Optimize(opt_corr,dk_name,True,log)
+    corr_erel=e-ecore
+    corr_vrel=np.sqrt(v**2+vcore**2)
+    print(f"EREL = {corr_erel:.4f} +- {corr_vrel:.4f}")
+    print(f"CORRELATION OPTIMIZATION LOWERED ENERGY BY: {corr_erel-wse_erel:.4f} MeV")

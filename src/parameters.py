@@ -4,28 +4,6 @@ Nuclei Param Files for nQMCC
 """
 #-----------------------------------------------------------------------
 class parameters_t:
-    NPART=0
-    NPROT=0
-    ISOSPIN_NT=0
-    NSPART=0
-    NPPART=0
-    NDPART=0
-    PHI_TYPE=0
-    NBETA=0
-    NPHIM=0
-    NS0=0
-    MXL=0
-    MNYOUNG=0
-    M_SPIN_LIM=0
-    IMA_LIM=0
-    NY_LIM=0
-    KMACO_LIM=0
-    M_L_LIM=0
-    NTERM=0
-    NSTA0=0
-    NSC0=0
-    NORTAB_DIM=0
-    MAX_ICY1=0
 #-----------------------------------------------------------------------
     def __init__(self,file_name_):
 #-----------------------------------------------------------------------

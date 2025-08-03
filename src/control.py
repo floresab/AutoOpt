@@ -5,19 +5,6 @@ Control Files for nQMCC
 #-----------------------------------------------------------------------
 class wavefunction_input_t:
 #-----------------------------------------------------------------------
-    IDX=0 #NUMBER OF LINES TO READ
-    PARAM_FILE ="" # PARAM FILES
-    DECK_FILE  ="" # VARIATIONAL PARAMS
-    RW_SPIN    ="" # READ / WRITE SPIN
-    RW_YLM_PHI ="" # READ / WRITE PHI
-    RW_CONFIG  ="" # READ / WRITE CONFIG (SPIN - ISOSPIN MATRIX)
-    SPIN_FILE  ="" # SPIN TABLE FILE
-    YLM_FILE   ="" # KALMAN-YLM FILE
-    PHI_FILE   ="" # KALMAN-PHI FILE
-    CONFIG_FILE="" # CONFIG FILE (PLACE HOLDER -- USED TO READ GFMC CONFIGS)
-    PRODUCT_PARAM_FILE=""  # PARAMETERS FOR A-BODY CLUSTER SYSTEM
-    PRODUCT_DECK_FILE =""  # DECK FOR CLUSTERS -- COUPLING INFORMATION
-#-----------------------------------------------------------------------
     def __init__(self,wf_type,list_wf_input,ridx=0):
         match wf_type.strip("\'"):
 #-----------------------------------------------------------------------
@@ -84,60 +71,6 @@ class wavefunction_input_t:
             self.PRODUCT_DECK_FILE =JoinPath(prefix,self.PRODUCT_DECK_FILE )
 #-----------------------------------------------------------------------
 class control_t:
-#-----------------------------------------------------------------------
-    FILE_NAME=""
-    BASIS =""                                    #
-    BRA_EQ_KET=""
-    BRA_TYPE=""                                 # WAVEFUNCTION TYPE FOR BRA
-    KET_TYPE=""                                 # WAVEFUNCTION TYPE FOR KET
-    INPUT_BRA=wavefunction_input_t("init",[])
-    INPUT_KET=wavefunction_input_t("init",[])
-    RW_WALK=""                                  # READ / WRITE COORDINATES + PAIR ORDER + RNG + PSISQ
-    WALK_FILE=""                                # NAME OF STORED WALK
-    LKE=""                                      # SWITCH FOR KINETIC ENERGY
-    LEMP=""                                     # SWITCH FOR ELECTROMAGNETIC POTENTIAL
-    CONST_FILE=""                               # NAME OF CONSTANTS FILE
-    L2BP_FILE=""                                # NAME OF TWO-BODY POT FILE
-    L3BP_FILE=""                                # NAME OF THREE-BODY POT FILE
-    RNG_SEED=""                                 # RANDOM SEED
-    NUM_BLOCKS=""                               # HOW MANY BLOCKS
-    BLOCK_SIZE=""                               # TOTAL EVAVLUATIONS IN A BLOCK
-    NUM_WALKERS_PER_NODE=""                     # NUMBER OF WALKERS PER MPI_SHARED_MEMORY_REGION
-    BURN_IN_COUNT=""                            # HOW MANY CONFIGS TO BURN IN
-    NUM_MOVES_BETWEEN=""                        # HOW MANY STEPS BETWEEN EVALUATIONS
-    PARTICLE_MAX_DX=""                          # MAX DISTANCE A PARTICLE CAN MOVE
-    NPTS=""                                     # GRID SIZE
-    NPTS_IN_ONE_FERMI=""                        # NUMBER OF GRID POINTS IN ONE FERMI
-    FD_FACTOR=""                                # FINITE DIFFERENCE GRID FACTOR
-    BOX_SIZE=""                                 # MAX DISTANCE BEWTEEN TWO CLUSTERS
-    SS_LIMIT=""                                 # MAX DISTANCE BEWTEEN s to s shell
-    SP_LIMIT=""                                 # MAX DISTANCE BEWTEEN s to p shell
-    SD_LIMIT=""                                 # MAX DISTANCE BEWTEEN s+p to sd shell
-    SAMPLE_L2=""                                # SAMPLE L^2 POTENTIAL -- massive computational savings for A>=10
-    RSAM=""                                     # distance between nucleons -- determines rejection L2 sampling
-    PSAM=""                                     # always accept min with this probability
-    BIN_WIDTH=""
-    BIN_MAXR=""                                 # DENSITY BINS
-    LASTP_SAMPLE_TYPE=""                        # SAMPLING FUNCTION SWITCH FOR P(R_sp)
-    LPS_A=""
-    LPS_B=""                                    # PARAMS FOR LAST PARTICLE SAMPLING FUNCTIONS
-    EXTRA_NORM=""                               # NORMS FOR GFMC CALCS (MIXED ESTIMATES)
-    EXTRA_NORM_ERROR=""                         # 
-    ANC_ENERGY=""                               # RELATIVE ENERGY BETWEEN CLUSTERS
-    REG_GAMMA=""                                # GAMMA FOR REGULARIZER
-    ECLSTR1=""
-    ECLSTR2=""                                  # ENERGY FOR A CLUSTER
-    DCLSTR1=""
-    DCLSTR2=""                                  # ST.DEV. FOR THE ENERGY OF THE CLUSTER
-    DO_GROUP=""                                 # DO GROUP THEORY OR READ IT
-    GROUP_FILE=""                               # FILE FOR PHIGEN
-    NORTAB_FILE=""                              # FILE FOR PHIGEN
-    NLOPT_METHOD=""                             # NLOPT ALGO
-    NUM_OPT_WALKS=""                            # HOW MANY TIMES TO LOOP OPTIMIZATION SEARCH
-    NUM_OPT_EVALUATIONS=""                      # HOW MANY ENERGY EVALUATIONS TO DO IN OPTIMIZATION
-    OPTIMIZATION_INPUT_FILE=""                  # HOW MUCH TO CHANGE EACH VARIATIONAL PARAMETER
-    OPTIMIZED_DECK_FILE=""                      # DECK WITH OPTIMAL PARAMETERS
-    SCRATCH_DIR=""                              # TEMPORARY STORAGE DIRECTORY
 #-----------------------------------------------------------------------
     def __init__(self,file_name_,prefix=""):
 #-----------------------------------------------------------------------

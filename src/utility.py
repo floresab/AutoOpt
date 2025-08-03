@@ -12,35 +12,6 @@ import re
 from control import control_t
 #-----------------------------------------------------------------------
 class utility_t:
-    FILE_NAME=""
-    NAME=""
-    SYSTEM_TYPE=""
-    RUN_CMD=[]
-    NQMCC_DIR=""
-    BIN_DIR=""
-    WORKING_DIR=""
-    CTRL_FILE=""
-    NUM_POTS=1
-    CONSTANTS_FILES=[]
-    TWO_BODY_FILES=[]
-    THREE_BODY_FILES=[]
-    NUM_BLOCKS=""
-    BLOCK_SIZE=""
-    WALKERS_PER_NODE=""
-    NUM_OPT_SAMPLES=""
-#-----------------------------------------------------------------------
-#   single channel scattering
-#-----------------------------------------------------------------------
-    NUM_CHANNELS=0
-    SCATTERING_CTRL_FILES=[]
-    SS_INDEXS=[]
-    OPTIMIZE_TARGET=False
-    ENERGY_LOWER_BOUND=0.5
-    ENERGY_UPPER_BOUND=6.0
-    DELTA_ENERGY=0.25
-    INITIAL_BSCAT=0.25
-    INITIAL_DELTA_BSCAT=0.25
-    MAX_BSCAT_SLOPE=2.0
 #-----------------------------------------------------------------------
     def __init__(self, file_name_):
         self.FILE_NAME = file_name_
@@ -83,6 +54,6 @@ def nQMCC(binary: str, ctrl: control_t, bin_dir: str, runner: list, write_log=Fa
             Path("logs").mkdir(exist_ok=True)
             log_file = Path("logs") / f"{log_name}.{binary}"
             with open(log_file, "a") as f:
-                f.write(f"\n===== Command: {' '.join(cmd)} =====\n")
+                f.write(f"===== Command: {' '.join(cmd)} =====\n")
                 f.write(result.stdout)
         return result.stdout

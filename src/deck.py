@@ -7,92 +7,6 @@ from copy import deepcopy
 #-----------------------------------------------------------------------
 class spatial_symmetry_t:
 #-----------------------------------------------------------------------
-    BLSNAME=""
-    L_CORE=""
-    S_CORE=""
-    J_CORE=""
-    T_CORE=""
-    TZ_CORE=""
-    L_SDSH=""
-    S_SDSH=""
-    J_SDSH=""
-    T_SDSH=""
-    TZ_SDSH=""
-    BETALSN=""
-    LFCSP=""
-    SPU=""
-    SPV=""
-    SPR=""
-    SPA=""
-    SPB=""
-    SPC=""
-    SPK=""
-    SPL=""
-    LFCPP=""
-    PPU=""
-    PPV=""
-    PPR=""
-    PPA=""
-    PPB=""
-    PPC=""
-    PPK=""
-    PPL=""
-    LFSP=""
-    E_OR_V=""
-    LSCAT=""
-    LMU1=""
-    LMU2=""
-    LQNUM=""
-    LNODES=""
-    WSE=""
-    WSV=""
-    WSR=""
-    WSA=""
-    WBRHO=""
-    WBALPH=""
-    BSCAT=""
-    LFCSD=""
-    SDU=""
-    SDV=""
-    SDR=""
-    SDA=""
-    SDB=""
-    SDC=""
-    SDK=""
-    SDL=""
-    LFCPD=""
-    PDU=""
-    PDV=""
-    PDR=""
-    PDA=""
-    PDB=""
-    PDC=""
-    PDK=""
-    PDL=""
-    LFCDD=""
-    DDU=""
-    DDV=""
-    DDR=""
-    DDA=""
-    DDB=""
-    DDC=""
-    DDK=""
-    DDL=""
-    D_LFSP=""
-    D_E_OR_V=""
-    D_LSCAT=""
-    D_LMU1=""
-    D_LMU2=""
-    D_LQNUM=""
-    D_LNODES=""
-    D_WSE=""
-    D_WSV=""
-    D_WSR=""
-    D_WSA=""
-    D_WBRHO=""
-    D_WBALPH=""
-    D_BSCAT=""
-#-----------------------------------------------------------------------
     def __init__(self,params: parameters_t,data_):
 #-----------------------------------------------------------------------
         data=deepcopy(data_)
@@ -192,77 +106,10 @@ class spatial_symmetry_t:
 #-----------------------------------------------------------------------
 class deck_t:
 #-----------------------------------------------------------------------
-    FILE_NAME=""
-    SS=[]
-    NAME=""
-    PARITY=""
-    TOTAL_J=""
-    TOTAL_JZ=""
-    TOTAL_T=""
-    TOTAL_TZ=""
-    LWF=""
-    LSC=""
-    LOPC=""
-    LCUT=""
-    ESEP=""
-    ETA=""
-    ZETA=""
-    FSCAL=""
-    AC=""
-    AA=""
-    AR=""
-    ALPHA=""
-    BETA=""
-    GAMMA=""
-    UUR=""
-    UUA=""
-    UUW=""
-    SSH_LFSP=""
-    SSH_E_OR_V=""
-    SSH_LSCAT=""
-    SSH_LMU1=""
-    SSH_LMU2=""
-    SSH_LQNUM=""
-    SSH_LNODES=""
-    SSH_WSE=""
-    SSH_WSV=""
-    SSH_WSR=""
-    SSH_WSA=""
-    SSH_WBRHO=""
-    SSH_WBALPH=""
-    DELTA=""
-    EPSILON=""
-    THETA=""
-    UPSILON=""
-    RSCAL=""
-    USCAL=""
-    QPS1=""
-    QPS2=""
-    QSSS1=""
-    QSSS2=""
-    QSSP1=""
-    QSSP1=""
-    QSPP1=""
-    QSPP1=""
-    QPPP1=""
-    QPPP1=""
-    QSPD1=""
-    QSPD2=""
-    QSSD1=""
-    QSSD2=""
-    QPPD1=""
-    QPPD2=""
-    QSDD1=""
-    QSDD2=""
-    QPDD1=""
-    QPDD2=""
-    QDDD1=""
-    QDDD2=""
-#-----------------------------------------------------------------------
-    def __init__(self, params: parameters_t, file_name_: str):
+    def __init__(self, params: parameters_t, file_name_: str, read=True):
 #-----------------------------------------------------------------------
         self.FILE_NAME = file_name_
-        self.Read(params)
+        if read: self.Read(params)
 #-----------------------------------------------------------------------
     def Read(self, params: parameters_t):
 #-----------------------------------------------------------------------
@@ -314,6 +161,8 @@ class deck_t:
             self.QDDD1,self.QDDD2=data[0][:2]
             data=data[1:]
 # ----------------------------------------------------------------------
+        self.SS=[]
+# ----------------------------------------------------------------------
         if params.NPPART >= 1:
             for b in range(params.NBETA):
                 self.SS.append(spatial_symmetry_t(params,data))
@@ -361,10 +210,7 @@ class deck_t:
 # ----------------------------------------------------------------------
         if params.NPPART >= 1:
             for b in range(params.NBETA):
-                if b == params.NBETA:
-                    self.SS[b].Write(params,file)
-                else:
-                    self.SS[b].Write(params,file,"")
+                if b < params.NBETA: self.SS[b].Write(params,file)
         file.close()
 # ----------------------------------------------------------------------
     def UpdateFloats(self, params: parameters_t, precision: int):
@@ -386,12 +232,12 @@ class deck_t:
                     else:
                         if "." in val: ss.__dict__[key]=f"{float(val):.{precision}f}"
 # ----------------------------------------------------------------------
-def GenerateZeroDeck(params: parameters_t, dk_: deck_t):
+def GenerateZeroDeck(params: parameters_t, file_name):
 # ----------------------------------------------------------------------
-    dk=deepcopy(dk_)
+    dk=deck_t(params,file_name)
 # ----------------------------------------------------------------------
     for key,val in dk.__dict__.items():
-        if (key not in ["FILE_NAME","NAME"]):
+        if (key not in ["FILE_NAME","NAME","SS"]):
             if isinstance(val,list):
                 dk.__dict__[key]=["0." for i in dk.__dict__[key]]
             else:
@@ -400,31 +246,32 @@ def GenerateZeroDeck(params: parameters_t, dk_: deck_t):
     if params.NBETA >=1:
         for ss in dk.SS:
             for key,val in ss.__dict__.items():
-                if isinstance(val,list):
-                    ss.__dict__[key]=["0." for i in dk.__dict__[key]]
-                elif isinstance(val,int):
-                    pass
-                else:
-                    if "." in val: ss.__dict__[key]="0."
+                if (key not in ["BLSNAME"]):
+                    if isinstance(val,list):
+                        ss.__dict__[key]=["0." for i in dk.__dict__[key]]
+                    elif isinstance(val,int):
+                        pass
+                    else:
+                        if "." in val: ss.__dict__[key]="0."
 # ----------------------------------------------------------------------
     return dk
 # ----------------------------------------------------------------------
-def GenerateOptFile(params: parameters_t, dk: deck_t, file_name, instructions: list):
+def GenerateOptFile(params: parameters_t, dk_: deck_t, file_name, instructions: list):
 # ----------------------------------------------------------------------
-    opt=GenerateZeroDeck(params,dk)
+    opt=GenerateZeroDeck(params,dk_.FILE_NAME)
     opt.FILE_NAME=file_name
     try:
         for i in instructions:
             if i["ss"]:
-                opt.SS[i["ss_idx"]].__dict__[i["key"]]=str(float(dk.SS[i["ss_idx"]].__dict__[i["key"]])*i["scale"]+i["flat"])
+                opt.SS[i["ss_idx"]].__dict__[i["key"]]=str(float(dk_.SS[i["ss_idx"]].__dict__[i["key"]])*i["scale"]+i["flat"])
             else:
                 if isinstance(opt.__dict__[i["key"]],list):
                     if i["all"]:
-                        opt.__dict__[i["key"]]=[str(float(v)*i["scale"]+i["flat"]) for v in dk.__dict__[i["key"]]]
+                        opt.__dict__[i["key"]]=[str(float(v)*i["scale"]+i["flat"]) for v in dk_.__dict__[i["key"]]]
                     else:
-                        opt.__dict__[i["key"]][i["idx"]]=str(float(dk.__dict__[i["key"]][i["idx"]])*i["scale"]+i["flat"])
+                        opt.__dict__[i["key"]][i["idx"]]=str(float(dk_.__dict__[i["key"]][i["idx"]])*i["scale"]+i["flat"])
                 else:
-                    opt.__dict__[i["key"]]=str(float(dk.__dict__[i["key"]])*i["scale"]+i["flat"])
+                    opt.__dict__[i["key"]]=str(float(dk_.__dict__[i["key"]])*i["scale"]+i["flat"])
     except KeyError:
         print(f"GenerateOptFile *** BAD KEY: {i["key"]} ***")
     opt.Write(params,file_name)
