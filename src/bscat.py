@@ -108,9 +108,13 @@ def SingleChannelOptimize(bscat:float, \
 #-----------------------------------------------------------------------
     num_samples=scatter.CTRL.NUM_OPT_SAMPLES
 #-----------------------------------------------------------------------
+    scatter.DK=deck_t(scatter.PARAMS,scatter.DK.FILE_NAME)
+    scatter.DK.FILE_NAME=f"\'{work_dir}temp.dk\'"
     scatter.DK.SS[ssi].BSCAT=str(bscat)
-    dk_name=f"\'{work_dir}dk/{label}.{bscat:.4f}.dk\'"
+    scatter.DK.Write(scatter.PARAMS,scatter.DK.FILE_NAME)
     scatter.CTRL.INPUT_BRA.DECK_FILE=scatter.DK.FILE_NAME
+#-----------------------------------------------------------------------
+    dk_name=f"\'{work_dir}dk/{label}.{bscat:.4f}.dk\'"
 #-----------------------------------------------------------------------
     print(f" 🔥 BSCAT = {bscat:.4f}  🔥 ")
     print(BREAK)
@@ -167,9 +171,25 @@ def SingleChannelOptimize(bscat:float, \
           }
     return dat
 #-----------------------------------------------------------------------
-def SingleChannelScan(work_dir:str, label:str, scatter:wavefunction_t,ssi:int, ecore:float,vcore:float):
+def SingleChannelScan(util:utility_t,\
+                      label:str,\
+                      scatter:wavefunction_t,\
+                      ssi:int,\
+                      ecore:float,vcore:float):
 #-----------------------------------------------------------------------
     scan=[]
-    bscat=float(scatter.DK.SS[ssi].BSCAT)
-    scan.append(SingleChannelOptimize(bscat,work_dir,label,scatter,ssi,ecore,vcore))
 #-----------------------------------------------------------------------
+# INITIAL BSCATS
+#-----------------------------------------------------------------------
+    bscat=util.INITIAL_BSCAT
+    scan.append(SingleChannelOptimize(bscat,util.WORKING_DIR,label,scatter,ssi,ecore,vcore))
+    bscat=util.INITIAL_BSCAT+util.INITIAL_DELTA_BSCAT
+    scan.append(SingleChannelOptimize(bscat,util.WORKING_DIR,label,scatter,ssi,ecore,vcore))
+    bscat=util.INITIAL_BSCAT-util.INITIAL_DELTA_BSCAT
+    scatter.DK.FILE_NAME=scan[0]["DECK_PATH"]
+    scan.append(SingleChannelOptimize(bscat,util.WORKING_DIR,label,scatter,ssi,ecore,vcore))
+#-----------------------------------------------------------------------
+# MOVE WITH INFORMATION ABOUT BSCAT(EREL) => DB_DE
+#-----------------------------------------------------------------------
+    db_de=abs(scan[2]["EREL"]-scan[1]["EREL"])/(2.*util.INITIAL_DELTA_BSCAT)
+    print(db_de)

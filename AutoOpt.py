@@ -90,13 +90,12 @@ def SingleChannelScattering(util: utility_t):
             print("... DONE")
             print(BREAK)
 #-----------------------------------------------------------------------
-            scatter.DK.SS[ssi].BSCAT = str(util.INITIAL_BSCAT)
             #Copy Core deck to scatter deck, write deck to file
             InitPShellScattWF(scatter,target,f"\'{util.WORKING_DIR}temp.dk\'")
             print(f"SCANNING BSCAT")
             print(BREAK)
 #-----------------------------------------------------------------------
-            SingleChannelScan(util.WORKING_DIR,sname,scatter,ssi,ecore,vcore)
+            SingleChannelScan(util,sname,scatter,ssi,ecore,vcore)
 #-----------------------------------------------------------------------
 def AutoOptAPI(util: utility_t):
 #-----------------------------------------------------------------------
