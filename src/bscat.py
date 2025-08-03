@@ -70,28 +70,28 @@ Optimize Logic
             {'params': ['wsr', 'wsa'], 'mode': 'scale', 'value': OPT_SCALE}
         ]
     )
-        results.append({
-            "bscat": b_next,
-            "E_rel": E_next,
-            "variance": var_next,
-            "deck_path": path_next,
-            "wse": wse_next
-        })
+        results.append()
     # --- Save Results ---
     results_sorted = sorted(results, key=lambda r: r["E_rel"])
     with open("optimized_decks.json", "w") as f:
         json.dump(results_sorted, f, indent=2)
 """
+def SingleChannelOptimize(bscat:float, \
+                          work_dir:str, \
+                          label:str, \
+                          scatter:wavefunction_t,\
+                          ssi:int,\
+                          ecore:float,\
+                          vcore:float):
 #-----------------------------------------------------------------------
-def SingleChannelScan(work_dir:str, label:str, scatter:wavefunction_t,ssi:int, ecore:float,vcore:float):
+    BREAK="="*72
 #-----------------------------------------------------------------------
-    scan=[]
     OPT_SCALE=0.2
     opt_wse_file_name=f"\'{work_dir}opt/wse.opt\'"
     wse_i=[{"ss":True,"ss_idx":ssi,"key":"WSE","scale":0, "flat":0.5}]
 #-----------------------------------------------------------------------
-    instructions=[{"ss":True,"ss_idx":ssi,"key":"QSSP1","scale":OPT_SCALE, "flat":0.0}\
-                 ,{"ss":True,"ss_idx":ssi,"key":"QSSP2","scale":OPT_SCALE, "flat":0.0}\
+    instructions=[{"ss":False,"key":"QSSP1","scale":OPT_SCALE, "flat":0.0}\
+                 ,{"ss":False,"key":"QSSP2","scale":OPT_SCALE, "flat":0.0}\
                  ,{"ss":True,"ss_idx":ssi,"key":"SPU"  ,"scale":OPT_SCALE, "flat":0.0}\
                  ,{"ss":True,"ss_idx":ssi,"key":"SPV"  ,"scale":OPT_SCALE, "flat":0.0}\
                  ,{"ss":True,"ss_idx":ssi,"key":"SPA"  ,"scale":OPT_SCALE, "flat":0.0}\
@@ -108,10 +108,12 @@ def SingleChannelScan(work_dir:str, label:str, scatter:wavefunction_t,ssi:int, e
 #-----------------------------------------------------------------------
     num_samples=scatter.CTRL.NUM_OPT_SAMPLES
 #-----------------------------------------------------------------------
-    bscat=float(scatter.DK.SS[ssi].BSCAT)
-    print(f"BSCAT = {bscat:.4f}")
+    scatter.DK.SS[ssi].BSCAT=str(bscat)
     dk_name=f"\'{work_dir}dk/{label}.{bscat:.4f}.dk\'"
     scatter.CTRL.INPUT_BRA.DECK_FILE=scatter.DK.FILE_NAME
+#-----------------------------------------------------------------------
+    print(f" 🔥 BSCAT = {bscat:.4f}  🔥 ")
+    print(BREAK)
     log=f"{work_dir}logs/{label}.start.{bscat:.4f}"
     print(f"BEGIN INITIAL EVALUATION: {log}.energy")
     e,v=scatter.Evaluate(True,log)
@@ -136,8 +138,38 @@ def SingleChannelScan(work_dir:str, label:str, scatter:wavefunction_t,ssi:int, e
     print(f"BEGIN CORRELATION OPTIMIZATION: {log}.optimize")
     opt_corr_file_name=f"\'{work_dir}opt/{label}.corr.{bscat:.4f}.opt\'"
     opt_corr=GenerateOptFile(scatter.PARAMS, scatter.DK, opt_corr_file_name,instructions)
+    opt_corr.UpdateFloats(scatter.PARAMS,6)
     e,v=scatter.Optimize(opt_corr,dk_name,True,log)
     corr_erel=e-ecore
     corr_vrel=np.sqrt(v**2+vcore**2)
     print(f"EREL = {corr_erel:.4f} +- {corr_vrel:.4f}")
     print(f"CORRELATION OPTIMIZATION LOWERED ENERGY BY: {corr_erel-wse_erel:.4f} MeV")
+#-----------------------------------------------------------------------
+    log=f"{work_dir}logs/{label}.all.{bscat:.4f}"
+    print(f"BEGIN CORRELATION OPTIMIZATION: {log}.optimize")
+    opt_all_file_name=f"\'{work_dir}opt/{label}.all.{bscat:.4f}.opt\'"
+    opt_all=GenerateOptFile(scatter.PARAMS, scatter.DK, opt_all_file_name,instructions_all)
+    opt_all.UpdateFloats(scatter.PARAMS,6)
+    e,v=scatter.Optimize(opt_all,dk_name,True,log)
+    all_erel=e-ecore
+    all_vrel=np.sqrt(v**2+vcore**2)
+    print(f"EREL = {all_erel:.4f} +- {all_vrel:.4f}")
+    print(f"ALL OPTIMIZATION LOWERED ENERGY BY: {all_erel-corr_erel:.4f} MeV")
+    print(BREAK)
+#-----------------------------------------------------------------------
+    dat = {
+            "TYPE": "VMC",
+            "BSCAT": bscat,
+            "EREL": all_erel,
+            "VREL": all_vrel,
+            "WSE": scatter.DK.SS[ssi].WSE,
+            "DECK_PATH": dk_name
+          }
+    return dat
+#-----------------------------------------------------------------------
+def SingleChannelScan(work_dir:str, label:str, scatter:wavefunction_t,ssi:int, ecore:float,vcore:float):
+#-----------------------------------------------------------------------
+    scan=[]
+    bscat=float(scatter.DK.SS[ssi].BSCAT)
+    scan.append(SingleChannelOptimize(bscat,work_dir,label,scatter,ssi,ecore,vcore))
+#-----------------------------------------------------------------------

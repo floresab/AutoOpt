@@ -139,13 +139,13 @@ class deck_t:
 # ----------------------------------------------------------------------
         if (params.NPPART >= 1):
             data=data[19:]
-            self.QSSP1,self.QSSP1=data[0][:2]
+            self.QSSP1,self.QSSP2=data[0][:2]
             data=data[1:]
         if (params.NPPART >= 2):
-            self.QSPP1,self.QSPP1=data[0][:2]
+            self.QSPP1,self.QSPP2=data[0][:2]
             data=data[1:]
         if (params.NPPART >= 3):
-            self.QPPP1,self.QPPP1=data[0][:2]
+            self.QPPP1,self.QPPP2=data[0][:2]
             data=data[1:]
 # ----------------------------------------------------------------------
         if (params.NDPART >= 1):
@@ -216,7 +216,7 @@ class deck_t:
     def UpdateFloats(self, params: parameters_t, precision: int):
 # ----------------------------------------------------------------------
         for key,val in self.__dict__.items():
-            if (key not in ["FILE_NAME","NAME"]):
+            if (key not in ["FILE_NAME","NAME","SS"]):
                 if isinstance(val,list):
                     self.__dict__[key]=[f"{float(i):.{precision}f}" for i in self.__dict__[key]]
                 else:
