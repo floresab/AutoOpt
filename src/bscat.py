@@ -131,8 +131,12 @@ def SingleChannelOptimize(bscat:float, \
     dat = {
             "TYPE": "VMC",
             "BSCAT": bscat,
+            "MU": float(scatter.PARAMS.NPART-1)/float(scatter.PARAMS.NPART),
+            "L": int(scatter.DK.SS[ssi].LQNUM),
+            "R": scatter.CTRL.BOX_SIZE,
+            "NODES": int(scatter.DK.SS[ssi].LNODES),
             "EREL": all_erel,
-            "VREL": all_vrel,
+            "VREL": float(all_vrel),
             "WSE": scatter.DK.SS[ssi].WSE,
             "DECK_PATH": dk_name
           }
@@ -163,7 +167,7 @@ def SingleChannelScan(util:utility_t,\
 #-----------------------------------------------------------------------
     count=0
     db_de=db_de_i
-    scatter.DK.FILE_NAME=scan[0]["DECK_PATH"]
+    scatter.DK.FILE_NAME=scan[1]["DECK_PATH"] #use first step as starting point but bscat/erel from initial
     bscat_prev=util.INITIAL_BSCAT
     erel_prev=scan[0]["EREL"]
     do_scan=True
@@ -171,7 +175,7 @@ def SingleChannelScan(util:utility_t,\
     print("FOWARD SCAN")
     print(BREAK)
 #-----------------------------------------------------------------------
-    while (do_scan):
+    while (do_scan): #direction=+
 #-----------------------------------------------------------------------
         count+=1
         idx=2+count
@@ -188,7 +192,7 @@ def SingleChannelScan(util:utility_t,\
 #-----------------------------------------------------------------------
     count=0
     db_de=db_de_i
-    scatter.DK.FILE_NAME=scan[0]["DECK_PATH"]
+    scatter.DK.FILE_NAME=scan[2]["DECK_PATH"]
     bscat_prev=util.INITIAL_BSCAT
     erel_prev=scan[0]["EREL"]
     do_scan=True
@@ -196,7 +200,7 @@ def SingleChannelScan(util:utility_t,\
     print("BACKWARD SCAN")
     print(BREAK)
 #-----------------------------------------------------------------------
-    while (do_scan):
+    while (do_scan): #direction=-
 #-----------------------------------------------------------------------
         count+=1
         idx=2+count
@@ -212,3 +216,4 @@ def SingleChannelScan(util:utility_t,\
         if count >= 2: do_scan = False
     for ele in scan:
         print(ele)
+        
