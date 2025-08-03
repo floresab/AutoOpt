@@ -4,6 +4,7 @@ Scans in Boundary Condition to generate wavefunctions with various energies
 """
 #-----------------------------------------------------------------------
 import numpy as np
+import json
 #-----------------------------------------------------------------------
 from utility import utility_t
 from deck import deck_t,GenerateOptFile
@@ -133,13 +134,15 @@ def SingleChannelOptimize(bscat:float, \
             "BSCAT": bscat,
             "MU": float(scatter.PARAMS.NPART-1)/float(scatter.PARAMS.NPART),
             "L": int(scatter.DK.SS[ssi].LQNUM),
-            "R": scatter.CTRL.BOX_SIZE,
+            "R": float(scatter.CTRL.BOX_SIZE),
             "NODES": int(scatter.DK.SS[ssi].LNODES),
             "EREL": all_erel,
             "VREL": float(all_vrel),
-            "WSE": scatter.DK.SS[ssi].WSE,
+            "WSE": float(scatter.DK.SS[ssi].WSE),
             "DECK_PATH": dk_name
           }
+    print(dat)
+    print(BREAK)
     return dat
 #-----------------------------------------------------------------------
 def SingleChannelScan(util:utility_t,\
@@ -214,6 +217,9 @@ def SingleChannelScan(util:utility_t,\
         erel_prev=scan[idx]["EREL"]
 #-----------------------------------------------------------------------
         if count >= 2: do_scan = False
-    for ele in scan:
-        print(ele)
-        
+#-----------------------------------------------------------------------
+    scan_sorted = sorted(scan, key=lambda r: r["EREL"])
+    with open(f"{util.WORKING_DIR}{label}.vmc.json", "w") as f:
+        json.dump(scan_sorted, f, indent=2)
+#-----------------------------------------------------------------------
+    return 0
