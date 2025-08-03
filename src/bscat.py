@@ -71,7 +71,7 @@ def SingleChannelOptimize(bscat:float, \
 #-----------------------------------------------------------------------
     opt_wse=GenerateOptFile(scatter.PARAMS, scatter.DK, opt_wse_file_name,wse_i)
 #-----------------------------------------------------------------------
-    num_samples=scatter.CTRL.NUM_OPT_SAMPLES
+    num_samples=scatter.CTRL.NUM_OPT_EVALUATIONS
 #-----------------------------------------------------------------------
     scatter.DK=deck_t(scatter.PARAMS,scatter.DK.FILE_NAME)
     scatter.DK.FILE_NAME=f"\'{work_dir}temp.dk\'"
@@ -90,7 +90,7 @@ def SingleChannelOptimize(bscat:float, \
     v_start=np.sqrt(v**2+vcore**2)
     print(f"EREL = {e_start:.4f} +- {v_start:.4f}")
 #-----------------------------------------------------------------------
-    scatter.CTRL.NUM_OPT_SAMPLES="5"
+    scatter.CTRL.NUM_OPT_EVALUATIONS="5"
     scatter.CTRL.NUM_OPT_WALKS="5"
 #-----------------------------------------------------------------------
     log=f"{work_dir}logs/{label}.wse.{bscat:.4f}"
@@ -102,7 +102,7 @@ def SingleChannelOptimize(bscat:float, \
     print(f"EREL = {wse_erel:.4f} +- {wse_vrel:.4f}")
     print(f"WSE OPTIMIZATION LOWERED ENERGY BY: {wse_erel-e_start:.4f} MeV")
 #-----------------------------------------------------------------------
-    scatter.CTRL.NUM_OPT_SAMPLES=num_samples
+    scatter.CTRL.NUM_OPT_EVALUATIONS=num_samples
     scatter.CTRL.NUM_OPT_WALKS="1"
 #-----------------------------------------------------------------------
     log=f"{work_dir}logs/{label}.corr.{bscat:.4f}"
@@ -175,10 +175,8 @@ def SingleChannelScan(util:utility_t,\
 #-----------------------------------------------------------------------
         count+=1
         idx=2+count
-        print(db_de,util.DELTA_ENERGY)
         db=db_de*util.DELTA_ENERGY
         bscat=bscat_prev+db
-        print(bscat)
         scan.append(SingleChannelOptimize(bscat,util.WORKING_DIR,label,scatter,ssi,ecore,vcore))
 #-----------------------------------------------------------------------
         db_de=db/abs(scan[idx]["EREL"]-erel_prev)
