@@ -33,7 +33,7 @@ class utility_t:
         self.TWO_BODY_FILES=data[9][:self.NUM_POTS]
         self.THREE_BODY_FILES=data[10][:self.NUM_POTS]
         self.NUM_BLOCKS,self.BLOCK_SIZE,self.WALKERS_PER_NODE=data[11][:3]
-        self.NUM_OPT_SAMPLES=data[12][0]
+        self.NUM_OPT_EVALUATIONS=data[12][0]
 #-----------------------------------------------------------------------
         if self.SYSTEM_TYPE.lower() == "sc_scattering":
             data=data[13:]

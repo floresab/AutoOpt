@@ -44,9 +44,9 @@ def SingleChannelScattering(util: utility_t):
     target_label=target.DK.NAME.strip("\'")
     target.CTRL.FILE_NAME=f"{util.WORKING_DIR}target.ctrl"
     target.CTRL.NUM_BLOCKS=util.NUM_BLOCKS
-    target.CTRL.BLOCK_SIZE=util.BLOCK_SIZE 
+    target.CTRL.BLOCK_SIZE=util.BLOCK_SIZE
     target.CTRL.WALKERS_PER_NODE=util.WALKERS_PER_NODE
-    target.CTRL.NUM_OPT_SAMPLES=util.NUM_OPT_SAMPLES
+    target.CTRL.NUM_OPT_EVALUATIONS=util.NUM_OPT_EVALUATIONS
     print("... DONE")
     print(BREAK)
 #-----------------------------------------------------------------------
@@ -81,7 +81,7 @@ def SingleChannelScattering(util: utility_t):
             scatter.CTRL.NUM_BLOCKS=util.NUM_BLOCKS
             scatter.CTRL.BLOCK_SIZE=util.BLOCK_SIZE 
             scatter.CTRL.WALKERS_PER_NODE=util.WALKERS_PER_NODE
-            scatter.CTRL.NUM_OPT_SAMPLES=util.NUM_OPT_SAMPLES
+            scatter.CTRL.NUM_OPT_EVALUATIONS=util.NUM_OPT_EVALUATIONS
             scatter.CTRL.CONST_FILE=f"'{util.NQMCC_DIR}constants/{const}'"
             scatter.CTRL.L2BP_FILE=f"'{util.NQMCC_DIR}pots/{pot2b}'"
             scatter.CTRL.L3BP_FILE=f"'{util.NQMCC_DIR}pots/{pot3b}'"
