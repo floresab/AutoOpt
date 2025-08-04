@@ -172,6 +172,7 @@ def SingleChannelScan(util:utility_t,\
     bscat_prev=util.INITIAL_BSCAT
     erel_prev=scan[0]["EREL"]
     do_scan=True
+    add_node=False
     de=0
     direction=1
 #-----------------------------------------------------------------------
@@ -222,6 +223,7 @@ def SingleChannelScan(util:utility_t,\
     bscat_prev=util.INITIAL_BSCAT
     erel_prev=scan[0]["EREL"]
     do_scan=True
+    add_node=False
     direction=-1
     de=0
 #-----------------------------------------------------------------------
@@ -240,14 +242,17 @@ def SingleChannelScan(util:utility_t,\
 #-----------------------------------------------------------------------
         de=scan[idx]["EREL"]-erel_prev
 #-----------------------------------------------------------------------
-        db_de=db/abs(de)
+        if add_node:
+            db_de=util.MAX_BSCAT_SLOPE
+        else:
+            db_de=db/abs(de)
 #-----------------------------------------------------------------------
         bscat_prev=bscat
         erel_prev=scan[idx]["EREL"]
 #-----------------------------------------------------------------------
         max_count_reached = count >= util.MAX_SCAN_COUNT
         out_of_bounds = (erel_prev < util.ENERGY_LOWER_BOUND) or (erel_prev > util.ENERGY_UPPER_BOUND)
-        add_node = (de > 0 ) and (db_de > util.MAX_BSCAT_SLOPE) #increasing energy and db_de above threshold
+        add_node = (de > 0 ) and (db_de > util.MAX_BSCAT_SLOPE) and (bscat*direction > 0.) #increasing energy and db_de above threshold
 #-----------------------------------------------------------------------
         if max_count_reached:
             do_scan = False
@@ -264,7 +269,7 @@ def SingleChannelScan(util:utility_t,\
             scatter.DK.FILE_NAME=f"\'{util.WORKING_DIR}temp.dk\'"
             scatter.DK.Write(scatter.PARAMS,scatter.DK.FILE_NAME)
             db_de=0
-            bscat_prev=2*direction*(-1)
+            bscat_prev=10.*direction*(-1)
 #-----------------------------------------------------------------------
     scan_sorted = sorted(scan, key=lambda r: r["EREL"])
     with open(f"{util.WORKING_DIR}{label}.vmc.json", "w") as f:
