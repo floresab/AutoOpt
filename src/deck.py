@@ -192,11 +192,11 @@ class deck_t:
         file.write(" ".join([self.QSSS1,self.QSSS2])+"\n")
 # ----------------------------------------------------------------------
         if (params.NPPART >= 1):
-            file.write(" ".join([self.QSSP1,self.QSSP1])+"\n")
+            file.write(" ".join([self.QSSP1,self.QSSP2])+"\n")
         if (params.NPPART >= 2):
-            file.write(" ".join([self.QSPP1,self.QSPP1])+"\n")
+            file.write(" ".join([self.QSPP1,self.QSPP2])+"\n")
         if (params.NPPART >= 3):
-            file.write(" ".join([self.QPPP1,self.QPPP1])+"\n")
+            file.write(" ".join([self.QPPP1,self.QPPP2])+"\n")
 # ----------------------------------------------------------------------
         if (params.NDPART >= 1):
             file.write(" ".join([self.QSPD1,self.QSPD2])+"\n")
