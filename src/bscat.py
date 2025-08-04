@@ -183,7 +183,7 @@ def SingleChannelScan(util:utility_t,\
         count+=1
         idx=2+count
         db=db_de*util.DELTA_ENERGY
-        print(f"db: {db} :: de: {de} :: db/de :: {direction*db_de}")
+        print(f"db: {db:.4f} :: de: {de:.4f} :: db/de :: {direction*db_de:.4f}")
         print(BREAK)
         bscat=bscat_prev+db*direction
         scan.append(SingleChannelOptimize(bscat,util.WORKING_DIR,label,scatter,ssi,util.OPT_SCALE,ecore,vcore))
@@ -216,7 +216,7 @@ def SingleChannelScan(util:utility_t,\
             db_de=0
             bscat_prev=2*direction*(-1)
 #-----------------------------------------------------------------------
-    count=0
+    #count=0 -- dont reset count
     db_de=db_de_i
     scatter.DK.FILE_NAME=scan[2]["DECK_PATH"]
     bscat_prev=util.INITIAL_BSCAT
@@ -233,7 +233,7 @@ def SingleChannelScan(util:utility_t,\
         count+=1
         idx=2+count
         db=db_de*util.DELTA_ENERGY
-        print(f"db: {db} :: de: {de} :: db/de :: {direction*db_de}")
+        print(f"db: {db:.4f} :: de: {de:.4f} :: db/de :: {direction*db_de:.4f}")
         print(BREAK)
         bscat=bscat_prev+db*direction
         scan.append(SingleChannelOptimize(bscat,util.WORKING_DIR,label,scatter,ssi,util.OPT_SCALE,ecore,vcore))
