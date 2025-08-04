@@ -33,7 +33,7 @@ class utility_t:
         self.TWO_BODY_FILES=data[9][:self.NUM_POTS]
         self.THREE_BODY_FILES=data[10][:self.NUM_POTS]
         self.NUM_BLOCKS,self.BLOCK_SIZE,self.WALKERS_PER_NODE=data[11][:3]
-        self.NUM_OPT_EVALUATIONS=data[12][0]
+        self.OPT_SCALE,self.NUM_OPT_EVALUATIONS=[float(data[12][0]),data[12][1]]
 #-----------------------------------------------------------------------
         if self.SYSTEM_TYPE.lower() == "sc_scattering":
             data=data[13:]
@@ -42,8 +42,8 @@ class utility_t:
             self.SS_INDEXS=[int(d) for d in data[2][:self.NUM_CHANNELS]]
             self.OPTIMIZE_TARGET = 1 == int(data[3][0])
             self.ENERGY_LOWER_BOUND, self.ENERGY_UPPER_BOUND, self.DELTA_ENERGY=[float(d) for d in data[4][:3]]
-            self.INITIAL_BSCAT,self.INITIAL_DELTA_BSCAT=[float(d) for d in data[5][:2]]
-            self.MAX_BSCAT_SLOPE=float(data[6][0])
+            self.INITIAL_BSCAT,self.INITIAL_DELTA_BSCAT,self.MAX_BSCAT_SLOP=[float(d) for d in data[5][:3]]
+            self.MAX_SCAN_COUNT=int(data[6][0])
 #-----------------------------------------------------------------------
 def nQMCC(binary: str, ctrl: control_t, bin_dir: str, runner: list, write_log=False, log_name=""):
         cmd = f"{" ".join(runner)} {bin_dir}{binary}".split()

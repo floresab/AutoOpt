@@ -47,26 +47,26 @@ def SingleChannelOptimize(bscat:float, \
                           label:str, \
                           scatter:wavefunction_t,\
                           ssi:int,\
+                          opt_scale:float,\
                           ecore:float,\
                           vcore:float):
 #-----------------------------------------------------------------------
     BREAK="="*72
 #-----------------------------------------------------------------------
-    OPT_SCALE=0.2
     opt_wse_file_name=f"\'{work_dir}opt/wse.opt\'"
     wse_i=[{"ss":True,"ss_idx":ssi,"key":"WSE","scale":0, "flat":0.5}]
 #-----------------------------------------------------------------------
-    instructions=[{"ss":False,"key":"QSSP1","scale":OPT_SCALE, "flat":0.0}\
-                 ,{"ss":False,"key":"QSSP2","scale":OPT_SCALE, "flat":0.0}\
-                 ,{"ss":True,"ss_idx":ssi,"key":"SPU"  ,"scale":OPT_SCALE, "flat":0.0}\
-                 ,{"ss":True,"ss_idx":ssi,"key":"SPV"  ,"scale":OPT_SCALE, "flat":0.0}\
-                 ,{"ss":True,"ss_idx":ssi,"key":"SPA"  ,"scale":OPT_SCALE, "flat":0.0}\
-                 ,{"ss":True,"ss_idx":ssi,"key":"SPB"  ,"scale":OPT_SCALE, "flat":0.0}\
-                 ,{"ss":True,"ss_idx":ssi,"key":"SPC"  ,"scale":OPT_SCALE, "flat":0.0}\
-                 ,{"ss":True,"ss_idx":ssi,"key":"SPK"  ,"scale":OPT_SCALE, "flat":0.0}\
-                 ,{"ss":True,"ss_idx":ssi,"key":"SPL"  ,"scale":OPT_SCALE, "flat":0.0}\
-                 ,{"ss":True,"ss_idx":ssi,"key":"WSR"  ,"scale":OPT_SCALE, "flat":0.0}\
-                 ,{"ss":True,"ss_idx":ssi,"key":"WSA"  ,"scale":OPT_SCALE, "flat":0.0}]
+    instructions=[{"ss":False,"key":"QSSP1","scale":opt_scale, "flat":0.0}\
+                 ,{"ss":False,"key":"QSSP2","scale":opt_scale, "flat":0.0}\
+                 ,{"ss":True,"ss_idx":ssi,"key":"SPU"  ,"scale":opt_scale, "flat":0.0}\
+                 ,{"ss":True,"ss_idx":ssi,"key":"SPV"  ,"scale":opt_scale, "flat":0.0}\
+                 ,{"ss":True,"ss_idx":ssi,"key":"SPA"  ,"scale":opt_scale, "flat":0.0}\
+                 ,{"ss":True,"ss_idx":ssi,"key":"SPB"  ,"scale":opt_scale, "flat":0.0}\
+                 ,{"ss":True,"ss_idx":ssi,"key":"SPC"  ,"scale":opt_scale, "flat":0.0}\
+                 ,{"ss":True,"ss_idx":ssi,"key":"SPK"  ,"scale":opt_scale, "flat":0.0}\
+                 ,{"ss":True,"ss_idx":ssi,"key":"SPL"  ,"scale":opt_scale, "flat":0.0}\
+                 ,{"ss":True,"ss_idx":ssi,"key":"WSR"  ,"scale":opt_scale, "flat":0.0}\
+                 ,{"ss":True,"ss_idx":ssi,"key":"WSA"  ,"scale":opt_scale, "flat":0.0}]
 #-----------------------------------------------------------------------
     instructions_all=instructions+wse_i
 #-----------------------------------------------------------------------
@@ -157,14 +157,12 @@ def SingleChannelScan(util:utility_t,\
 # INITIAL BSCATS
 #-----------------------------------------------------------------------
     bscat=util.INITIAL_BSCAT
-    scan.append(SingleChannelOptimize(bscat,util.WORKING_DIR,label,scatter,ssi,ecore,vcore))
+    scan.append(SingleChannelOptimize(bscat,util.WORKING_DIR,label,scatter,ssi,util.OPT_SCALE,ecore,vcore))
     bscat=util.INITIAL_BSCAT+util.INITIAL_DELTA_BSCAT
-    scan.append(SingleChannelOptimize(bscat,util.WORKING_DIR,label,scatter,ssi,ecore,vcore))
+    scan.append(SingleChannelOptimize(bscat,util.WORKING_DIR,label,scatter,ssi,util.OPT_SCALE,ecore,vcore))
     bscat=util.INITIAL_BSCAT-util.INITIAL_DELTA_BSCAT
     scatter.DK.FILE_NAME=scan[0]["DECK_PATH"]
-    scan.append(SingleChannelOptimize(bscat,util.WORKING_DIR,label,scatter,ssi,ecore,vcore))
-#-----------------------------------------------------------------------
-# MOVE WITH INFORMATION ABOUT BSCAT(EREL) => DB_DE
+    scan.append(SingleChannelOptimize(bscat,util.WORKING_DIR,label,scatter,ssi,util.OPT_SCALE,ecore,vcore))
 #-----------------------------------------------------------------------
     db_de_i=(2.*util.INITIAL_DELTA_BSCAT)/abs(scan[2]["EREL"]-scan[1]["EREL"])
 #-----------------------------------------------------------------------
@@ -174,6 +172,7 @@ def SingleChannelScan(util:utility_t,\
     bscat_prev=util.INITIAL_BSCAT
     erel_prev=scan[0]["EREL"]
     do_scan=True
+    direction=1
 #-----------------------------------------------------------------------
     print("FOWARD SCAN")
     print(BREAK)
@@ -183,15 +182,36 @@ def SingleChannelScan(util:utility_t,\
         count+=1
         idx=2+count
         db=db_de*util.DELTA_ENERGY
-        bscat=bscat_prev+db
-        scan.append(SingleChannelOptimize(bscat,util.WORKING_DIR,label,scatter,ssi,ecore,vcore))
+        bscat=bscat_prev+db*direction
+        scan.append(SingleChannelOptimize(bscat,util.WORKING_DIR,label,scatter,ssi,util.OPT_SCALE,ecore,vcore))
 #-----------------------------------------------------------------------
-        db_de=db/abs(scan[idx]["EREL"]-erel_prev)
+        de=scan[idx]["EREL"]-erel_prev
+#-----------------------------------------------------------------------
+        db_de=db/abs(de)
 #-----------------------------------------------------------------------
         bscat_prev=bscat
         erel_prev=scan[idx]["EREL"]
 #-----------------------------------------------------------------------
-        if count >= 2: do_scan = False
+        max_count_reached = count >= util.MAX_SCAN_COUNT
+        out_of_bounds = (erel_prev < util.ENERGY_LOWER_BOUND) or (erel_prev > util.ENERGY_UPPER_BOUND)
+        add_node = (de > 0 ) and (db_de > util.MAX_BSCAT_SLOPE) #increasing energy and db_de above threshold
+#-----------------------------------------------------------------------
+        if max_count_reached:
+            do_scan = False
+            print("MAX SCAN COUNT REACHED")
+            print(BREAK)
+        if out_of_bounds:
+            do_scan = False
+            print("ENERGY OUT OF BOUNDS")
+            print(BREAK)
+        if add_node:
+            print("ADDING NODE TO PHI")
+            print(BREAK)
+            scatter.DK.SS[ssi].LNODES=str(int(scatter.DK.SS[ssi].LNODES)+1)
+            scatter.DK.FILE_NAME=f"\'{work_dir}temp.dk\'"
+            scatter.DK.Write(scatter.PARAMS,scatter.DK.FILE_NAME)
+            db_de=0
+            bscat_prev=2*direction*(-1)
 #-----------------------------------------------------------------------
     count=0
     db_de=db_de_i
@@ -199,24 +219,46 @@ def SingleChannelScan(util:utility_t,\
     bscat_prev=util.INITIAL_BSCAT
     erel_prev=scan[0]["EREL"]
     do_scan=True
+    direction=-1
 #-----------------------------------------------------------------------
     print("BACKWARD SCAN")
     print(BREAK)
 #-----------------------------------------------------------------------
-    while (do_scan): #direction=-
+    while (do_scan): #direction=-1
 #-----------------------------------------------------------------------
         count+=1
         idx=2+count
         db=db_de*util.DELTA_ENERGY
-        bscat=bscat_prev-db
-        scan.append(SingleChannelOptimize(bscat,util.WORKING_DIR,label,scatter,ssi,ecore,vcore))
+        bscat=bscat_prev+db*direction
+        scan.append(SingleChannelOptimize(bscat,util.WORKING_DIR,label,scatter,ssi,util.OPT_SCALE,ecore,vcore))
 #-----------------------------------------------------------------------
-        db_de=db/abs(scan[idx]["EREL"]-erel_prev)
+        de=scan[idx]["EREL"]-erel_prev
+#-----------------------------------------------------------------------
+        db_de=db/abs(de)
 #-----------------------------------------------------------------------
         bscat_prev=bscat
         erel_prev=scan[idx]["EREL"]
 #-----------------------------------------------------------------------
-        if count >= 2: do_scan = False
+        max_count_reached = count >= util.MAX_SCAN_COUNT
+        out_of_bounds = (erel_prev < util.ENERGY_LOWER_BOUND) or (erel_prev > util.ENERGY_UPPER_BOUND)
+        add_node = (de > 0 ) and (db_de > util.MAX_BSCAT_SLOPE) #increasing energy and db_de above threshold
+#-----------------------------------------------------------------------
+        if max_count_reached:
+            do_scan = False
+            print("MAX SCAN COUNT REACHED")
+            print(BREAK)
+        if out_of_bounds:
+            do_scan = False
+            print("ENERGY OUT OF BOUNDS")
+            print(BREAK)
+        if add_node:
+            print("ADDING NODE TO PHI")
+            print(BREAK)
+            scatter.DK.SS[ssi].LNODES=str(int(scatter.DK.SS[ssi].LNODES)+1)
+            scatter.DK.FILE_NAME=f"\'{work_dir}temp.dk\'"
+            scatter.DK.Write(scatter.PARAMS,scatter.DK.FILE_NAME)
+            db_de=0
+            bscat_prev=2*direction*(-1)
 #-----------------------------------------------------------------------
     scan_sorted = sorted(scan, key=lambda r: r["EREL"])
     with open(f"{util.WORKING_DIR}{label}.vmc.json", "w") as f:
