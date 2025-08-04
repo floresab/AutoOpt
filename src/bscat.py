@@ -243,7 +243,7 @@ def SingleChannelScan(util:utility_t,\
         de=scan[idx]["EREL"]-erel_prev
 #-----------------------------------------------------------------------
         if add_node:
-            db_de=util.MAX_BSCAT_SLOPE
+            db_de=0.5
         else:
             db_de=db/abs(de)
 #-----------------------------------------------------------------------
@@ -269,7 +269,7 @@ def SingleChannelScan(util:utility_t,\
             scatter.DK.FILE_NAME=f"\'{util.WORKING_DIR}temp.dk\'"
             scatter.DK.Write(scatter.PARAMS,scatter.DK.FILE_NAME)
             db_de=0
-            bscat_prev=10.*direction*(-1)
+            bscat_prev=5.*direction*(-1)
 #-----------------------------------------------------------------------
     scan_sorted = sorted(scan, key=lambda r: r["EREL"])
     with open(f"{util.WORKING_DIR}{label}.vmc.json", "w") as f:
