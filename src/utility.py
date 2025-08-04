@@ -42,7 +42,7 @@ class utility_t:
             self.SS_INDEXS=[int(d) for d in data[2][:self.NUM_CHANNELS]]
             self.OPTIMIZE_TARGET = 1 == int(data[3][0])
             self.ENERGY_LOWER_BOUND, self.ENERGY_UPPER_BOUND, self.DELTA_ENERGY=[float(d) for d in data[4][:3]]
-            self.INITIAL_BSCAT,self.INITIAL_DELTA_BSCAT,self.MAX_BSCAT_SLOP=[float(d) for d in data[5][:3]]
+            self.INITIAL_BSCAT,self.INITIAL_DELTA_BSCAT,self.MAX_BSCAT_SLOPE=[float(d) for d in data[5][:3]]
             self.MAX_SCAN_COUNT=int(data[6][0])
 #-----------------------------------------------------------------------
 def nQMCC(binary: str, ctrl: control_t, bin_dir: str, runner: list, write_log=False, log_name=""):

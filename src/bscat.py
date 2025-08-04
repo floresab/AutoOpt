@@ -172,6 +172,7 @@ def SingleChannelScan(util:utility_t,\
     bscat_prev=util.INITIAL_BSCAT
     erel_prev=scan[0]["EREL"]
     do_scan=True
+    de=0
     direction=1
 #-----------------------------------------------------------------------
     print("FOWARD SCAN")
@@ -182,6 +183,8 @@ def SingleChannelScan(util:utility_t,\
         count+=1
         idx=2+count
         db=db_de*util.DELTA_ENERGY
+        print(f"db: {db} :: de: {de} :: db/de :: {direction*db_de}")
+        print(BREAK)
         bscat=bscat_prev+db*direction
         scan.append(SingleChannelOptimize(bscat,util.WORKING_DIR,label,scatter,ssi,util.OPT_SCALE,ecore,vcore))
 #-----------------------------------------------------------------------
@@ -220,6 +223,7 @@ def SingleChannelScan(util:utility_t,\
     erel_prev=scan[0]["EREL"]
     do_scan=True
     direction=-1
+    de=0
 #-----------------------------------------------------------------------
     print("BACKWARD SCAN")
     print(BREAK)
@@ -229,6 +233,8 @@ def SingleChannelScan(util:utility_t,\
         count+=1
         idx=2+count
         db=db_de*util.DELTA_ENERGY
+        print(f"db: {db} :: de: {de} :: db/de :: {direction*db_de}")
+        print(BREAK)
         bscat=bscat_prev+db*direction
         scan.append(SingleChannelOptimize(bscat,util.WORKING_DIR,label,scatter,ssi,util.OPT_SCALE,ecore,vcore))
 #-----------------------------------------------------------------------
