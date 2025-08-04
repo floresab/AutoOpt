@@ -17,6 +17,10 @@ class utility_t:
         self.FILE_NAME = file_name_
         self.Read(self.FILE_NAME)
 #-----------------------------------------------------------------------
+        print("UTILITY INPUTS")
+        for key,val in self.__dict__.items():
+            print(f"{key} :: {val}")
+#-----------------------------------------------------------------------
     def Read(self, filename):
         file = open(self.FILE_NAME.strip("\'"), 'r')
         data = [(l.strip().split()) for l in file.readlines()]

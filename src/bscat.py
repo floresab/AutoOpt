@@ -261,7 +261,7 @@ def SingleChannelScan(util:utility_t,\
             print("ADDING NODE TO PHI")
             print(BREAK)
             scatter.DK.SS[ssi].LNODES=str(int(scatter.DK.SS[ssi].LNODES)+1)
-            scatter.DK.FILE_NAME=f"\'{work_dir}temp.dk\'"
+            scatter.DK.FILE_NAME=f"\'{util.WORKING_DIR}temp.dk\'"
             scatter.DK.Write(scatter.PARAMS,scatter.DK.FILE_NAME)
             db_de=0
             bscat_prev=2*direction*(-1)

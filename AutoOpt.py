@@ -19,7 +19,6 @@ def SingleChannelScattering(util: utility_t):
 #-----------------------------------------------------------------------
     BREAK="="*72
 #-----------------------------------------------------------------------
-    print(BREAK)
     print("SETTING UP WORKING ENVIORMENT")
     try:
         os.mkdir(util.WORKING_DIR)
@@ -107,6 +106,8 @@ def AutoOptAPI(util: utility_t):
 #-----------------------------------------------------------------------
 if __name__ == '__main__':
 #-----------------------------------------------------------------------
+    BREAK="="*72
+#-----------------------------------------------------------------------
     parser = argparse.ArgumentParser(
         description="Run AutoOpt using a utility file",
         epilog="""
@@ -118,7 +119,9 @@ if __name__ == '__main__':
     parser.add_argument('--utility', required=True, help="/path/to/utility/file")
     args = parser.parse_args()
 #-----------------------------------------------------------------------
+    print(BREAK)
     util = utility_t(args.utility)
+    print(BREAK)
 #-----------------------------------------------------------------------
     AutoOptAPI(util)
 #-----------------------------------------------------------------------
