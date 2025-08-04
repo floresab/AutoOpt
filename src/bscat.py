@@ -82,14 +82,14 @@ def SingleChannelOptimize(bscat:float, \
 #-----------------------------------------------------------------------
     dk_name=f"\'{work_dir}dk/{label}.{bscat:.4f}.dk\'"
 #-----------------------------------------------------------------------
-    print(f" 🔥 BSCAT = {bscat:.4f}  🔥 ")
+    print(f" 🔥 BSCAT = {bscat:.4f} 🔥")
     print(BREAK)
     log=f"{work_dir}logs/{label}.start.{bscat:.4f}"
     print(f"BEGIN INITIAL EVALUATION: {log}.energy")
     e,v=scatter.Evaluate(True,log)
     e_start=e-ecore
     v_start=np.sqrt(v**2+vcore**2)
-    print(f"EREL = {e_start:.4f} +- {v_start:.4f}")
+    print(f" ⚛ EREL = {e_start:.4f} +- {v_start:.4f}")
 #-----------------------------------------------------------------------
     scatter.CTRL.NUM_OPT_EVALUATIONS="5"
     scatter.CTRL.NUM_OPT_WALKS="5"
@@ -100,7 +100,7 @@ def SingleChannelOptimize(bscat:float, \
     wse_erel=e-ecore
     wse_vrel=np.sqrt(v**2+vcore**2)
     print(f"OPTIMAL WSE = {float(scatter.DK.SS[ssi].WSE):.4f}")
-    print(f"EREL = {wse_erel:.4f} +- {wse_vrel:.4f}")
+    print(f" ⚛ EREL = {wse_erel:.4f} +- {wse_vrel:.4f}")
     print(f"WSE OPTIMIZATION LOWERED ENERGY BY: {wse_erel-e_start:.4f} MeV")
 #-----------------------------------------------------------------------
     scatter.CTRL.NUM_OPT_EVALUATIONS=num_samples
@@ -114,7 +114,7 @@ def SingleChannelOptimize(bscat:float, \
     e,v=scatter.Optimize(opt_corr,dk_name,True,log)
     corr_erel=e-ecore
     corr_vrel=np.sqrt(v**2+vcore**2)
-    print(f"EREL = {corr_erel:.4f} +- {corr_vrel:.4f}")
+    print(f" ⚛ EREL = {corr_erel:.4f} +- {corr_vrel:.4f}")
     print(f"CORRELATION OPTIMIZATION LOWERED ENERGY BY: {corr_erel-wse_erel:.4f} MeV")
 #-----------------------------------------------------------------------
     log=f"{work_dir}logs/{label}.all.{bscat:.4f}"
@@ -125,7 +125,7 @@ def SingleChannelOptimize(bscat:float, \
     e,v=scatter.Optimize(opt_all,dk_name,True,log)
     all_erel=e-ecore
     all_vrel=np.sqrt(v**2+vcore**2)
-    print(f"EREL = {all_erel:.4f} +- {all_vrel:.4f}")
+    print(f" ⚛ EREL = {all_erel:.4f} +- {all_vrel:.4f}")
     print(f"ALL OPTIMIZATION LOWERED ENERGY BY: {all_erel-corr_erel:.4f} MeV")
     print(BREAK)
 #-----------------------------------------------------------------------
@@ -175,7 +175,7 @@ def SingleChannelScan(util:utility_t,\
     de=0
     direction=1
 #-----------------------------------------------------------------------
-    print("FOWARD SCAN")
+    print("📈 INCREASING BSCAT SCAN")
     print(BREAK)
 #-----------------------------------------------------------------------
     while (do_scan): #direction=+
@@ -225,7 +225,7 @@ def SingleChannelScan(util:utility_t,\
     direction=-1
     de=0
 #-----------------------------------------------------------------------
-    print("BACKWARD SCAN")
+    print("📉 DECREASING BSCAT SCAT")
     print(BREAK)
 #-----------------------------------------------------------------------
     while (do_scan): #direction=-1
@@ -251,14 +251,14 @@ def SingleChannelScan(util:utility_t,\
 #-----------------------------------------------------------------------
         if max_count_reached:
             do_scan = False
-            print("MAX SCAN COUNT REACHED")
+            print(" 🏁 MAX SCAN COUNT REACHED")
             print(BREAK)
         if out_of_bounds:
             do_scan = False
-            print("ENERGY OUT OF BOUNDS")
+            print(" 🏁 ENERGY OUT OF BOUNDS")
             print(BREAK)
         if add_node:
-            print("ADDING NODE TO PHI")
+            print(" 🫚 ADDING NODE TO PHI")
             print(BREAK)
             scatter.DK.SS[ssi].LNODES=str(int(scatter.DK.SS[ssi].LNODES)+1)
             scatter.DK.FILE_NAME=f"\'{util.WORKING_DIR}temp.dk\'"
