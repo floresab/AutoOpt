@@ -200,8 +200,9 @@ def DirectionalScan(direction,\
         scatter.DK.SS[ssi].LNODES=str(int(scatter.DK.SS[ssi].LNODES)+1)
         scatter.DK.FILE_NAME=f"\'{util.WORKING_DIR}temp.dk\'"
         scatter.DK.Write(scatter.PARAMS,scatter.DK.FILE_NAME)
-        for bscat in [10.,5.,2.5,1.25,0.5,0.25,0.1,-.1]:
-            dscan.append(SingleChannelOptimize(bscat,util.WORKING_DIR,label,scatter,ssi,util.OPT_SCALE,ecore,vcore))
+        for bscat in [10.,5.,2.5,1.25,0.625]:
+            dscan.append(SingleChannelOptimize(bscat*(-1)*direction\
+                ,util.WORKING_DIR,label,scatter,ssi,util.OPT_SCALE,ecore,vcore))
 #-----------------------------------------------------------------------
     return dscan
 #-----------------------------------------------------------------------
