@@ -14,9 +14,10 @@ Maria Piarulli (WASHU)
 ## Todo
 1. Bound State optimization
 2. Generate zero deck main program
-3. Bounds checking in scan
-4. update logic for +1 node
+3. Improve bounds checking in scan
+4. Update logic for +1 node
 5. Update Documentation
+6. Automate tests
 
 ## Usage
 
