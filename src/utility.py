@@ -18,6 +18,7 @@ class utility_t:
         self.Read(self.FILE_NAME)
 #-----------------------------------------------------------------------
         print("UTILITY INPUTS")
+        print("="*72)
         for key,val in self.__dict__.items():
             print(f"{key} :: {val}")
 #-----------------------------------------------------------------------
