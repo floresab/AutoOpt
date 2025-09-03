@@ -19,10 +19,9 @@ class wavefunction_t:
         self.BIN_DIR=bin_dir_
         self.RUN_CMD=run_cmd_
 #-----------------------------------------------------------------------
-    def Evaluate(self,write_log,log_name):  ## the problem child
+    def Evaluate(self,write_log,log_name):
         log = nQMCC("energy", self.CTRL, self.BIN_DIR, self.RUN_CMD, write_log, log_name)
         rx=r'H\s*=\s*(-?\d+\.\d+)\s*\((\d+\.\d+)\)'
-        #rx = r'H\s*=\s*(-?(?:\d+\.\d+|NaN))\s*\(\s*(-?(?:\d+\.\d+|NaN))\s*\)'   # trying a new regex which allows NaNs
         try:
             energy_str,var_str = findall(rx, log)[-1]
             return float(energy_str),float(var_str)

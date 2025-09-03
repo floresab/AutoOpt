@@ -90,9 +90,7 @@ def SingleChannelOptimize(bscat:float, \
 #-----------------------------------------------------------------------
     wse_iter  = 0
     wse_iter2 = 0
-    wse=0.
     inital_wse=float(scatter.DK.SS[ssi].WSE)
-    direction=-1
     while (e == None) and (wse_iter < 100):
         wse_iter += 1
         wse = inital_wse - 0.1*wse_iter
